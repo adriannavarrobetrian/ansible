@@ -1,0 +1,8 @@
+DB_NAME: zabbix
+DB_ENGINE_VERSION: 5.6
+DB_INSTANCE_NAME: zabbix-db-01
+DB_INSTANCE_TYPE: db.t2.small
+DB_SIZE: 10
+DB_TAGS: {Class: "zabbix-server-db", Name: "{{ DB_INSTANCE_NAME }}", Env: "{{ ENV }}"}
+DB_SUBNET: admin-rds-subnet
+DB_CHAR_SET: no

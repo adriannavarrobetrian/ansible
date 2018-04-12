@@ -1,0 +1,42 @@
+# Role to deploy backups script
+#
+# Depends on the jenkins-user role currently
+---
+ - name: Create directory
+   file:
+     path=/opt/backups
+     state=directory
+     owner=jenkins-user
+     group=jenkins-user
+
+ - name: Create logs directory
+   file:
+     path=/opt/backups/logs/
+     state=directory
+     owner=jenkins-user
+     group=jenkins-user
+
+ - name: Upload log rotate entry
+   copy:
+     src=backups
+     dest=/etc/logrotate.d/
+
+ - name: root known_hosts entry to get around ssh clone bug
+   lineinfile:
+     dest=/root/.ssh/known_hosts
+     line="[stash.ht.powa.com]:7999,[172.16.75.123]:7999 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCIJabkBA92+TcWYMD7kdk/FPAx6d5YWS2xTBP8jj0rwBjpQkby3woB7ASBMF7RNI1TNEumgHKnQrmivrd6AwH1nakju7gQEvb4dR1yXZf4ZAg93XlzBYo44qh4XbJ3Wup442y4SF+pjSOpRg1XbnOKQ38yBpkZ04z3bG84Dtv8cAWNxThbV+z7L6h0qek7aTOwGoEHgj9OqJpITDvnoH8L7WbUeWtBssszGwg2MbUMPfhsbDJIu9bwi0ljbaXAbztiF9Bn8zX4ktsJrrZLuRTwRl+UJAnZCI8JnFgTHJxGhkZ/P7z5XQvMVVlYF96AcSYDxs9CRnPfjhUlfZwF/mDZ"
+
+ - name: Checkout latest code
+   git:
+     accept_hostkey=yes
+     repo=ssh://git@stash.ht.powa.com:7999/sys/backups.git
+     dest=/opt/backups
+     force=yes
+     key_file=/home/jenkins-user/.ssh/id_rsa
+
+ - name: Chown /etc/backups to jenkins-user
+   file:
+     path=/opt/backups
+     owner=jenkins-user
+     group=jenkins-user
+     recurse=yes

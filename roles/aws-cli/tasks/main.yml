@@ -1,0 +1,19 @@
+# Role to set up AWS CLI
+---
+ - name: Stat existence of CLI
+   stat: 
+     path=/usr/local/aws
+   register: aws_install
+
+ - name: Download AWS CLI code
+   unarchive:
+     src=https://s3.amazonaws.com/aws-cli/awscli-bundle.zip
+     dest=/tmp/
+     copy=no
+   when: not aws_install.stat.exists
+   register: cli_download   
+
+ - name: Install CLI
+   shell: /tmp/awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
+   when: cli_download.changed
+   

@@ -1,0 +1,7 @@
+AUTH_KEY: "Rb1m4txjydvyGY54csGrcw=="
+MASTER_IP: 172.16.10.20
+SLAVE_IP: 172.16.10.21
+
+dns_zones:
+ - sbox.venda-sbs.com
+ - test.gplshops.com

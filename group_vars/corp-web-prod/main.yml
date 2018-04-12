@@ -1,0 +1,8 @@
+---
+domains_static:
+ - site.powa.com.sbox.venda-sbs.com
+ - admin.powa.com.sbox.venda-sbs.com
+ - api.powa.com.sbox.venda-sbs.com
+ - test.gplshops.com
+ - admin.test.gplshops.com
+ - api.test.gplshops.com

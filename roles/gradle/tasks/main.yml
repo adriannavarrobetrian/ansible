@@ -1,0 +1,14 @@
+# Role to set up Gradle
+# Anton Pritchard-Meaker
+---
+
+ - name: Create .gradle dir
+   file:
+     path=/root/.gradle
+     state=directory
+
+ - name: Copy gradle.properties
+   copy:
+     src=gradle.properties
+     dest=/root/.gradle/
+ 

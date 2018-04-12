@@ -1,0 +1,10 @@
+# Playbook to set up uses with admin access via ssh
+---
+ - name: Create ssh access
+   hosts: secure-euw1a-aux-log-mon-1.powa.pci
+   become: yes
+   vars:
+     ssh_users:
+      - jenkins-user
+   roles:
+    - ssh-users

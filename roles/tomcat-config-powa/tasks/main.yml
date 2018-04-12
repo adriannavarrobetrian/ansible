@@ -1,0 +1,216 @@
+# Role to configure Tomcat installations for Powa Web
+---
+
+ - name: install sysconfig for both tomcat instances
+   copy:
+     src=sysconfig_tomcat_{{ item }}
+     dest=/etc/sysconfig/tomcat_{{ item }}
+     mode=0755
+   with_items:
+     - cms
+     - engine
+
+ - name: copy init.d scripts for both tomcat instances
+   copy:
+     src=init_tomcat_{{ item }}
+     dest=/etc/init.d/tomcat_{{ item }}
+   with_items:
+     - cms
+     - engine
+
+ - name: Create instances dir
+   file:
+     path=/usr/local/tomcat/actual/instances
+     state=directory
+     owner=tomcat
+     group=tomcat
+
+ - name: Configure NFS mount (tomcat)
+   mount: 
+     name=/tomcat src=nfs-01.{{ ENV }}.{{ ZONE }}:/store/nfs/tomcat  
+     opts=_netdev,rw,noatime,rsize=65536,wsize=65536,timeo=14,intr 
+     state=mounted 
+     fstype=nfs4
+
+ - name: Change ownership to tomcat
+   file:
+     path=/tomcat
+     owner=tomcat
+     group=tomcat
+
+ - name: Create Required dirs per instance
+   file:
+     path=/usr/local/tomcat/actual/instances/{{ item.app }}/{{ item.dir }}
+     state=directory
+     owner=tomcat 
+     group=tomcat
+   with_items:
+     - { app: "cms", dir: "webapps" }
+     - { app: "engine", dir: "webapps" }
+     - { app: "cms", dir: "logs" }
+     - { app: "engine", dir: "logs" }
+     - { app: "cms", dir: "jmx" }
+     - { app: "engine", dir: "jmx" }
+     - { app: "cms", dir: "temp" }
+     - { app: "engine", dir: "temp" }
+
+ - name: remove default webapps from tomcat (cms)
+   file: path=/usr/local/tomcat/actual/instances/cms/webapps/{{ item }} state=absent
+   with_items:
+   - docs
+   - examples
+   - host
+   - host-examples
+   - ROOT
+   - host-manager
+   - manager
+
+ - name: remove default webapps from tomcat (engine)
+   file: path=/usr/local/tomcat/actual/instances/engine/webapps/{{ item }} state=absent
+   with_items:
+   - docs
+   - examples
+   - host
+   - host-examples
+   - ROOT
+   - host-manager
+   - manager
+
+ - name: Create webapp symlinks
+   file: 
+     src=/tomcat/{{ item.app }} 
+     dest=/usr/local/tomcat/actual/instances/{{ item.instance }}/webapps/{{ item.link }} 
+     state=link
+   with_items:
+    - { instance: "cms",    link: "admin",    app: "admin"    }
+    - { instance: "cms",    link: "ws",       app: "api"      }
+    - { instance: "cms",    link: "cms",      app: "cms"      }
+    - { instance: "cms",    link: "file",     app: "file"     }
+    - { instance: "cms",    link: "gbase",    app: "gbase"    }
+    - { instance: "cms",    link: "rest",     app: "rest"     }
+    - { instance: "cms",    link: "template", app: "template" }
+    - { instance: "engine", link: "ROOT",     app: "engine"   }
+#   when: "'01' in inventory_hostname"
+
+# - name: Create webapp symlinks
+#   file:
+#     src=/tomcat/{{ item.app }}
+#     dest=/usr/local/tomcat/actual/instances/{{ item.instance }}/webapps/{{ item.link }}
+#     state=link
+#   with_items:
+#    - { instance: "cms",    link: "ws",       app: "api"      }
+#   when: "'01' not in inventory_hostname"
+
+ - name: download jmx settings from S3
+   s3:
+     mode=get
+     bucket=greenlightpower
+     object="test/conf/tomcat_jmx.tgz"
+     dest="/tmp/tomcat_jmx.tgz"
+
+ - name: extract jmx settings
+   unarchive:
+     src=/tmp/tomcat_jmx.tgz
+     dest=/usr/local/tomcat/actual/instances/
+     copy=no
+
+ - name: download tomcat settings from S3
+   s3:
+     mode=get
+     bucket=greenlightpower
+     object="test/conf/tomcat_conf.tgz"
+     dest="/tmp/tomcat_conf.tgz"
+
+ - name: extract conf settings
+   unarchive:
+     src=/tmp/tomcat_conf.tgz
+     dest=/usr/local/tomcat/actual/instances
+     copy=no
+   register: tomcat_conf
+
+ - name: Remove tomcat_conf.tgz
+   file:
+     path={{ tomcat_conf.src }}
+     state=absent
+
+ - name: Upload start scripts
+   copy:
+     src={{ item }}
+     dest=/etc/init.d/
+     mode=u+x
+   with_items:
+    - tomcat_cms
+    - tomcat_engine
+
+ - name: Upload start/stop tomcat scripts
+   copy:
+     src={{ item }}tomcat
+     dest=/root/bin/
+     mode=u+x
+   with_items:
+    - start
+    - stop
+
+ - name: Create dirs under root
+   file:
+     path=/root/{{ item }}
+     state=directory
+   with_items:
+    - backup
+    - deploy
+    
+ - name: Upload backup scripts
+   copy:
+     src={{ item }}
+     dest=/root/backup
+     mode=u+x
+   with_items:
+    - backup_db.sh
+    - backup_logs.sh
+    - backup_cfg.sh
+
+ - name: Upload deploy scripts
+   copy:
+     src={{ item }}
+     dest=/root/deploy
+     mode=u+x
+   with_items:
+    - untar_backups.sh
+    - clean_app.sh
+    - set_perms.sh
+    - update_app.sh
+    - configure_{{ ENV }}.sh
+
+ - name: Set tomcat permissions
+   file:
+     path=/usr/local/tomcat
+     owner=tomcat
+     group=tomcat
+     recurse=yes
+
+ - name: Upload powa technologies cert
+   copy:
+     src=powa-cert.der
+     dest=/tmp/
+   register: powa_cert
+
+ - name: Import powa technologies cert into Java Key Store
+   command: keytool -import -trustcacerts -file {{ powa_cert.dest }} -alias powatechnologies -keystore /usr/java/latest/jre/lib/security/cacerts -noprompt -storepass changeit 
+
+ - name: Remove powa technologies cert
+   file:
+     path={{ powa_cert.dest }}
+     state=absent
+
+ - name: Install dos2unix
+   yum:
+     name=dos2unix
+     state=present
+
+ - name: Install cron
+   cron:
+     name="Update DNS and Apache configs every morning"
+     hour=6
+     minute=30
+     job="/tomcat/serverupdater_v2/updateservers.sh >/dev/null 2>&1"
+   when: "'01' in inventory_hostname" 

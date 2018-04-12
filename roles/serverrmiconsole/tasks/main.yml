@@ -1,0 +1,33 @@
+---
+ - name: Set ns package pre-append
+   set_fact:
+     app="dns"
+     user="named"
+   when: ansible_hostname | match("^ns-*")
+
+ - name: Set haproxy package pre-append
+   set_fact:
+     app="haproxy"
+   when: ansible_hostname | match("^lb-*")
+
+ - name: install Server RMI Console (DNS / HAProxy)
+   yum: 
+     name={{ app }}-serverrmiconsole 
+     state=latest
+
+ - name: Set ownership of dirs to rmiuser
+   file:
+     path=/usr/local/serverrmiconsole
+     owner={{ user }}
+     group={{
+
+# - name: install Server RMI Console (DNS / HAProxy)
+#   yum: name={{ ansible_hostname.split('-')[0] }}-serverrmiconsole state=latest
+#   become: true
+#   when: ansible_hostname | match ("^(dns|haproxy)*")
+
+ - name: install Server RMI Console (HTTPD)
+   yum: name=httpd-serverrmiconsole state=latest
+   become: true
+   when: ansible_hostname | match ("^web*")
+

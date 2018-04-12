@@ -1,0 +1,2 @@
+#Ansible: OpsGenie_Heartbeat
+*/5 * * * * curl -s -XPOST 'https://api.opsgenie.com/v1/json/heartbeat/send' -d '{"apiKey": "{{ OPS_GENIE_APIKEY }}", "name": "GPL Heartbeat"}' -o /dev/null

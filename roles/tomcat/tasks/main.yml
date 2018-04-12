@@ -1,0 +1,36 @@
+# Role to install Tomcat7
+# Anton Pritchard-Meaker
+#
+---
+ - name: create tomcat group
+   group: 
+     name=tomcat 
+     gid=5502
+
+ - name: create tomcat user
+   user: 
+     name=tomcat 
+     home=/tomcat 
+     createhome=no 
+     uid=5502 
+     group=tomcat
+
+ - name: create /usr/local/tomcat structure
+   file: 
+     path=/usr/local/tomcat/  
+     state=directory
+   register: tomcat_actual
+
+ - name: extract tomcat tarball for cms
+   unarchive: 
+     src=apache-tomcat-7.0.40.tar.gz
+     dest=/usr/local/tomcat/
+   register: tomcat
+   when: tomcat_actual.changed
+
+ - name: Symlink Tomcat
+   file:
+     src=/usr/local/tomcat/apache-tomcat-7.0.40
+     dest=/usr/local/tomcat/actual
+     state=link
+   register: tomcat

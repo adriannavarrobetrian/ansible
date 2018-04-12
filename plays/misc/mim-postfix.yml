@@ -1,0 +1,7 @@
+# Playbook to launch test Load Balancers
+#
+ - name: Set up postfix and stunnel
+   hosts: mim-app-01.prod.glp
+   become: yes
+   roles:
+    - postfix-ses

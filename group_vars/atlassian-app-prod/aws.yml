@@ -1,0 +1,22 @@
+COUNT: 1
+SEC_GROUP: sg-b45749d8 
+AMI: non-secure 
+TYPE: c4.xlarge
+BUILD_KEY: buildscm.pem
+VPC_SUBNET: subnet-216d5048
+TAGS: {Class: "prod-{{ FUNC }}-server", Name: "{{ inventory_hostname }}", Env: "{{ ENV }}"}
+IAM_ROLE: no 
+ENV: prod
+PUBLIC_IP: no
+ZONE: glp
+EC2_VOLUME_SIZE: 20
+VOLUMES:
+ - device_name: /dev/sda1
+   volume_size: "{{ EC2_VOLUME_SIZE }}"
+   delete_on_termination: true
+ - device_name: /dev/sdb
+   volume_size: "{{ STORE_VOL_SIZE }}"
+   delete_on_termination: false
+ - device_name: /dev/sdc
+   volume_size: 4
+   delete_on_termination: true 

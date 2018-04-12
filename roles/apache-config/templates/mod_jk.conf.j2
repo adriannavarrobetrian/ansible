@@ -1,0 +1,69 @@
+
+LoadModule jk_module modules/mod_jk.so
+
+JkWorkersFile /etc/httpd/conf.d/workers.properties
+JkShmFile /var/log/httpd/mod_jk.shm
+
+JkLogFile /var/log/httpd/mod_jk.log
+#-#JkLogFile "|/usr/bin/logger -p local3.info"
+JkLogLevel info
+JkRequestLogFormat     "%T %R %V %r %s"
+
+#As required by Servlet API 2.3
+JkOptions    +ForwardURIProxy +ForwardURICompatUnparsed +ForwardKeySize -RejectUnsafeURI 
+
+# ----------
+#   Mounts
+# ----------
+
+JkMountCopy All
+
+SetEnvIf Request_URI "^/publish/*" no-jk
+SetEnvIf Request_URI "^/manager/*" no-jk
+SetEnvIf Request_URI "^/host-manager/*" no-jk
+SetEnvIf Request_URI "^/file/*" no-jk
+
+SetEnvIf Request_URI "^/service_update.*" no-jk
+SetEnvIf Request_URI "^/robots.txt" no-jk
+
+JkMount /cms tomcat-lb-cms
+JkMount /cms/* tomcat-lb-cms
+JkUnMount /cms/resource/* tomcat-lb-cms
+
+JkMount /template tomcat-lb-cms
+JkMount /template/* tomcat-lb-cms
+JkUnMount /template/resource/* tomcat-lb-cms
+
+JkMount /admin tomcat-lb-cms
+JkMount /admin/* tomcat-lb-cms
+
+JkMount /rest tomcat-lb-cms
+JkMount /rest/* tomcat-lb-cms
+
+JkMount /ws tomcat-lb-cms
+JkMount /ws/* tomcat-lb-cms
+
+JkMount / tomcat-lb-engine
+JkMount /* tomcat-lb-engine
+JkUnMount /resource/* tomcat-lb-engine
+JkUnMount /engine/resource/* tomcat-lb-engine
+JkUnMount /cms tomcat-lb-engine
+JkUnMount /cms/* tomcat-lb-engine
+JkUnMount /template tomcat-lb-engine
+JkUnMount /template/* tomcat-lb-engine
+JkUnMount /admin tomcat-lb-engine
+JkUnMount /admin/* tomcat-lb-engine
+JkUnMount /ws tomcat-lb-engine
+JkUnMount /ws/* tomcat-lb-engine
+
+# -------------
+#   JK Status
+# -------------
+
+<Location /jk-status>
+    Order deny,allow
+    Deny from all
+     Allow from 172.28.224.66
+</Location>
+
+JkMount /jk-status jk-status

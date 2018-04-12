@@ -1,0 +1,19 @@
+# Role to create http repo
+# Relies on nginx role
+# Anton Pritchard-Meaker
+---
+ - name: Create directories
+   file:
+     path={{ item }}
+     mode=755
+   with_items:
+    - /var/www/html/kickstart/centos6
+    - /var/www/html/iso/centos6
+    - /var/www/rpm/
+
+ - name: Upload nginx config
+   copy: 
+     src=default.conf
+     dest=/etc/nginx/conf.d/
+   notify:
+    - Restart Nginx

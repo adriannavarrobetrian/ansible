@@ -1,0 +1,44 @@
+# Role to set up zabbix agent to allow auto-registration
+#
+# To be included in the AMI build to avoid this on instance creation.
+#
+# Won't start the Agent, this is done by zabbix-agent-start
+---
+ - name: Set up zabbix repository
+   yum:
+     name=http://repo.zabbix.com/zabbix/3.0/rhel/6/x86_64/zabbix-release-3.0-1.el6.noarch.rpm
+     state=present
+   when: not ansible_hostname | match("^secure*")
+
+ - name: Copy over Zabbix rpm key
+   copy:
+     src=RPM-GPG-KEY-ZABBIX
+     dest=/etc/pki/rpm-gpg/
+   when: ansible_hostname | match("^secure*")
+   register: rpm_upload
+
+ - name: Import Zabbix yum config
+   copy:
+     src=zabbix.repo
+     dest=/etc/yum.repos.d/zabbix.repo
+
+ - name: Install zabbix agent
+   yum:
+     name=zabbix-agent
+     state=present
+
+ - name: Check if SELinux is enabled
+   command: awk /^SELINUX=enforcing$/ /etc/selinux/config
+   register: selinux_state 
+   changed_when: False
+
+ - name: Set permissive state for Zabbix Agent if SElinux is enabled
+   selinux_permissive:
+     domain=zabbix_agent_t
+     permissive=true
+   when: selinux_state.stdout | match("SELINUX=enforcing")
+
+ - name: Upload config file
+   template:
+     src=zabbix_agentd.conf.j2
+     dest=/etc/zabbix/zabbix_agentd.conf

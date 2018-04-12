@@ -1,0 +1,17 @@
+#!/bin/sh
+
+export JAVA_HOME=/usr/java/latest
+
+export RMIConsole=/usr/local/serverrmiconsole
+export RMIConsoleLib=$RMIConsole/lib
+
+export JVM_OPTIONS="-Xms128M -Xmx256M -DHermes.PropertyFile=$RMIConsole/conf/server.xml -Djava.security.policy=$RMIConsole/bin/java.policy"
+
+#export SSL_DEBUG=javax.net.debug=ssl,handshake,data,trustmanager
+
+export RMI_HOST="-Djava.rmi.server.hostname={{ ansible_default_ipv4.address }}"
+
+export CLASSPATH=$CLASSPATH:$RMIConsoleLib/rmiconsole-1.0.2.jar:$RMIConsoleLib/commons-collections-2.1.1.jar:$RMIConsoleLib/commons-discovery-0.2.jar:$RMIConsoleLib/commons-logging-1.0.4.jar:$RMIConsoleLib/ehcache-1.1.jar:$RMIConsoleLib/hermes-core.jar:$RMIConsoleLib/log4j-1.2.9.jar:$RMIConsoleLib/xalan.jar:$RMIConsoleLib/xerces.jar:$RMIConsoleLib/xml-apis.jar
+
+nohup $JAVA_HOME/bin/java $RMI_HOST $JVM_OPTIONS uk.co.unitechnology.server.rmi.RMIServer $CONSOLE_OPTIONS >>$RMIConsole/logs/process.log 2>&1 &
+

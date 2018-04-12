@@ -1,0 +1,41 @@
+# Role to install OpenVPN
+---
+ - name: Enable IP forwarding
+   sysctl: 
+     name=net.ipv4.ip_forward
+     value=1
+     state=present
+
+ - name: Install OpenVPN from EPEL
+   yum: 
+     name=openvpn
+     state=present
+
+ - name: Enable openvpn
+   service:
+     name=openvpn
+     enabled=yes
+     
+ - name: Upload config
+   template:
+     src=server.conf.j2
+     dest=/etc/openvpn/server.conf
+
+ - name: Upload pam.d config
+   copy:
+     src=openvpn
+     dest=/etc/pam.d/
+
+ - name: Upload iptables entries
+   template:
+     src=iptables.j2
+     dest=/etc/sysconfig/iptables
+   register: iptables
+
+ - name: Reload iptables
+   command: iptables-restore < {{ iptables.dest }}
+
+ - name: Create openvpn logs dir
+   file:
+     path=/etc/openvpn/logs
+     state=directory

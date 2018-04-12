@@ -1,0 +1,8 @@
+---
+- name: deploy preprod
+  hosts: all
+  connection: local
+
+- include: nfs-server.yml
+- include: mysql-server.yml
+

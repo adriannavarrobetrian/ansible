@@ -1,0 +1,189 @@
+#!/bin/bash
+
+###############################################################################
+# CONFIG
+
+# AWS config
+
+export AWS_ACCESS_KEY={{ AWS_ACCESS }}
+export AWS_SECRET_KEY={{ AWS_SECRET }}
+export JAVA_HOME=/usr/java/latest
+export EC2_HOME=/usr/local/aws
+export PATH=$PATH:$JAVA_HOME/bin:$EC2_HOME/bin
+export EC2_URL=https://eu-west-1.ec2.amazonaws.com
+
+VIRTUAL_IP="{{ VIP }}"
+ENI_ID="{{ eni.interfaces.0.id }}"
+
+###############################################################################
+
+
+###############################################################################
+# For testing purposes delete OCF_ROOT after testing
+OCF_ROOT=/usr/lib/ocf/
+#
+# INIT
+: ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/resource.d/heartbeat}
+if [ -f ${OCF_FUNCTIONS_DIR}/.ocf-shellfuncs ]; then
+  . ${OCF_FUNCTIONS_DIR}/.ocf-shellfuncs
+fi
+
+USAGE="usage: $0 {start|stop|status|meta-data}";
+###############################################################################
+
+meta_data() {
+    cat <<END
+<?xml version="1.0"?>
+<!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
+<resource-agent name="virtual-ip">
+<version>1.0</version>
+<longdesc lang="en">
+This script manages private Virtual IP in AWS.
+</longdesc>
+<shortdesc lang="en">Manages Amazon EC2 Private Virtual IP addresses</shortdesc>
+
+<parameters></parameters>
+
+<actions>
+  <action name="start"   timeout="20s" />
+  <action name="stop"    timeout="20s" />
+  <action name="monitor"  timeout="20s" />
+  <action name="meta-data"  timeout="5s" />
+</actions>
+</resource-agent>
+END
+}
+
+ip_already_associated() {
+   if [ `ec2-describe-network-interfaces "$ENI_ID" | grep -c "$VIRTUAL_IP"` -eq 1 ]; then
+    ocf_log info "Virtual IP address already associated to the node"
+    return $OCF_SUCCESS
+  else
+      ocf_log err "Virtual IP address not associated to the node"
+    return $OCF_ERR_GENERIC
+  fi
+}
+
+ip_start() {
+  ip_validate_all || exit $?
+
+  if ip_monitor; then
+    ocf_log info "Resource is already running"
+    return $OCF_SUCCESS
+  fi
+
+  ec2-assign-private-ip-addresses -n "$ENI_ID" --secondary-private-ip-address "$VIRTUAL_IP" --allow-reassignment > /dev/null
+  /sbin/ip addr add $VIRTUAL_IP dev eth0 > /dev/null
+
+  if [ $? -eq 1 ]; then
+    ocf_log info "An error occurred when starting the resource"
+    return $OCF_ERR_GENERIC
+  fi
+
+  while ! ip_monitor; do
+    ocf_log debug "Resource has not started yet, waiting"
+    sleep 1
+  done
+
+  ocf_log info "Virtual IP Address has been successfully assigned"
+  return $OCF_SUCCESS
+}
+
+ip_stop() {
+  ip_validate_all || exit $?
+
+  if ip_monitor; then
+    ocf_log debug "Resource is currently running"
+  else
+    ocf_log info "Resource is already stopped"
+    return $OCF_SUCCESS
+  fi
+
+  ec2-unassign-private-ip-addresses -n "$ENI_ID" --secondary-private-ip-address "$VIRTUAL_IP" > /dev/null
+  /sbin/ip addr del $VIRTUAL_IP dev eth0 > /dev/null
+
+  if [ $? -eq 0 ]; then
+      while ip_monitor; do
+        ocf_log debug "Resource has not stopped yet, waiting"
+        sleep 1
+      done
+      ocf_log info "Resource is stopped"
+  else
+    ocf_log info "An error occurred when stopping the resource"
+    exit $OCF_ERR_GENERIC
+  fi
+
+  return $OCF_SUCCESS
+}
+
+# FIRST approach to monitoring
+ip_monitor() {
+  ip_validate_all || exit $?
+
+  if ip_already_associated; then
+
+    ping -c 1 $VIRTUAL_IP > /dev/null
+    if [ $? -eq 0 ]; then
+      ocf_log info "Virtual IP responding to ping test, resource test sucessful"
+      return $OCF_SUCCESS
+    else
+      ocf_log err "Virtual IP not responding to ping test, resource test failed"
+      return $OCF_ERR_GENERIC
+    fi
+  else
+  ocf_log debug "Resource not running"
+  return $OCF_NOT_RUNNING
+  fi
+
+  return $OCF_SUCCESS
+}
+
+ip_validate_all() {
+  which ec2-describe-addresses > /dev/null
+
+  if [ $? -eq 1 ]; then
+    ocf_log info "AWS command line tools unavailable"
+    return $OCF_ERR_INSTALLED
+  elif [ -z "$AWS_SECRET_KEY" ]; then
+    ocf_log info "AWS_SECRET_KEY env variable not set"
+    return $OCF_ERR_CONFIGURED
+  elif [ -z "$AWS_ACCESS_KEY" ]; then
+    ocf_log info "AWS_ACCESS_KEY env variable not set"
+    return $OCF_ERR_CONFIGURED
+  elif [ -z "$EC2_HOME" ]; then
+    ocf_log info "EC2_HOME env variable not set"
+    return $OCF_ERR_CONFIGURED
+  elif [ -z "$JAVA_HOME" ]; then
+    ocf_log info "JAVA_HOME env variable not set"
+    return $OCF_ERR_CONFIGURED
+  elif [ -z "$EC2_URL" ]; then
+    ocf_log info "EC2_URL env variable not set"
+    return $OCF_ERR_CONFIGURED
+  elif [ -z $VIRTUAL_IP ]; then
+    ocf_log info "VIRTUAL_IP env variable not set"
+    return $OCF_ERR_CONFIGURED
+  fi
+  return $OCF_SUCCESS
+}
+
+usage() {
+    echo $USAGE >&2
+    return $1
+}
+
+if [ $# -ne 1 ]; then
+    usage $OCF_ERR_ARGS
+fi
+
+case $1 in
+    meta-data)          meta_data;;
+    start)              ip_start;;
+    stop)               ip_stop;;
+    status)             ip_monitor;; # Status is deprecated, monitor replaces it.
+    monitor)            ip_monitor;;
+    validate-all)       ip_validate_all;;
+    usage)              usage $OCF_SUCCESS;;
+    *)                  usage $OCF_ERR_UNIMPLEMENTED;;
+esac
+
+exit $?

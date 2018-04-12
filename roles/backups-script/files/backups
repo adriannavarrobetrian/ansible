@@ -1,0 +1,8 @@
+/opt/backups/logs/*.log {
+    missingok
+    daily
+    notifempty
+    rotate 30
+    compress
+    delaycompress
+}

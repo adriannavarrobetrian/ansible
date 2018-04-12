@@ -1,0 +1,22 @@
+# Role to install and run ClamAV
+#
+#
+---
+ - name: Install required packages
+   yum: 
+     name={{ item }}
+     state=present
+   with_items:
+    - clamav-milter
+    - clamav
+    - clamd
+    - clamav-db
+
+ - name: Apply freshclam to get latest definitions
+   command: freshclam
+
+ - name: Start and enable Clam AV
+   service:
+     name=clamd
+     enabled=yes
+     state=started

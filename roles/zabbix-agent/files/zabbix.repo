@@ -1,0 +1,7 @@
+[zabbix]
+name=Zabbix Installation Files - $basearch
+baseurl=http://repo.powa.pci/zabbix/3.0/rhel/6/$basearch
+failovermethod=priority
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-ZABBIX

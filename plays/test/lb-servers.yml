@@ -1,0 +1,33 @@
+# Playbook to launch test Load Balancers
+#
+ - name: Create instance
+   hosts: lb-test
+   connection: local
+   gather_facts: false
+   roles:
+     - ec2-instance
+
+ - name: Get EC2 Facts
+   hosts: lb-test
+   gather_facts: false
+   tasks:
+    - name: Get EC2 Facts for hosts
+      action: ec2_facts
+
+ - name: Set up haproxy
+   hosts: lb-test
+   become: yes
+   roles:
+     - ec2-api-tools
+     - { role: stunnel, tags: stunnel }
+     - haproxy
+     - serverrmiconsole-lb
+     - corosync
+     - corosync-lb
+     - zabbix-agent-start
+   
+ - name: Run SSL Updater
+   hosts: app01.test.glp
+   tasks:
+    - name: Run SSL updater
+      command: /tomcat/serverupdater_v2/generatecertificates.sh

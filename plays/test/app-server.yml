@@ -1,0 +1,21 @@
+# Playbook to spawn an tomcat server
+---
+# - name: Create Tomcat server
+#   hosts: all
+#   connection: local
+#   roles:
+#     - ec2-instance
+
+ - name: Install Tomcat 
+   hosts: ansible-test-instance
+   become: yes
+   vars:
+     ssh_users:
+      - "neastes"
+      - "rlukosevicius"
+      - "fmoraru"
+   roles:
+     - { role: ssh-users, tags: ssh-users }
+     - tomcat
+     - tomcat-config-powa
+     - zabbix-agent-start

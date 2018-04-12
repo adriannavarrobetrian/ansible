@@ -1,0 +1,10 @@
+# Role to complete any work needed to get a client ready to receive Ansible commands
+---
+ - name: Install needed packages
+   yum: 
+     name={{ item }}
+     state=present
+   with_items:
+     - libselinux-python
+     - policycoreutils-python
+

@@ -1,0 +1,16 @@
+# Playbook to spawn an Varnish Cache Server cluster with HA Failover
+ - name: Create servers
+   hosts: search-cache-prod 
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Install Varnish 
+   hosts: search-cache-prod
+   become: yes
+   roles:
+    - ec2-api-tools
+    - { role: varnish, tags: varnish }
+    - corosync
+    - corosync-varnish
+    - { role: zabbix-agent-start, tags: zabbix-agent-start }

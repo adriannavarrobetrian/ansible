@@ -1,0 +1,17 @@
+# Role to create DNS records in route53
+#
+# To be used in conjunction with ec2-instance build role
+#
+---
+ - name: Create DNS records
+     command=create
+     zone={{ zone }}
+     record={{ inventory_hostname }}.$ENV.{{ zone }}
+     type=A
+     ttl=60
+     value={{ ansible_default_ipv4.address }}
+     overwrite=yes
+
+ - name: For DNS to propegate
+   local_action: wait_for host=
+   become: no

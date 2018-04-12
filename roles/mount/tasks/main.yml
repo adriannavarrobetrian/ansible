@@ -1,0 +1,26 @@
+# Role to create mount 
+---
+#Create filesystem on target
+
+ - name: Format the disk
+   filesystem: 
+     fstype={{ item.fstype }}
+     dev={{ item.source }}
+     force=no
+   with_items: "{{ aws_mounts }}"
+
+# Create directory
+ - name: destination dir 
+   file: 
+     path={{ item.destination }} 
+     state=directory
+   with_items: "{{ aws_mounts }}"
+
+# Mount DATA folder
+ - name: Mount suorce to destination
+   mount: 
+     name={{ item.destination }} 
+     src={{ item.source }} 
+     fstype={{ item.fstype }} 
+     state=mounted
+   with_items: "{{ aws_mounts }}"

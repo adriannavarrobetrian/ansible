@@ -1,0 +1,58 @@
+#!/bin/bash
+#
+# Startup script for Tomcat, the Apache Servlet Engine
+# by Karl-Koenig Koenigsson
+#
+# $Id: tomcat.init,v 1.1 2004/05/17 06:59:22 koenig Exp $
+#
+# chkconfig: 345 81 19
+# description: The Apache tomcat JSP server
+# processname: tomcat
+# pidfile: /var/run/tomcat_engine.pid
+# config: /etc/sysconfig/tomcat_engine
+. /etc/rc.d/init.d/functions
+if [ -f /etc/sysconfig/tomcat_engine ]; then
+    . /etc/sysconfig/tomcat_engine
+fi
+RETVAL=0
+# start and stop functions
+start() {
+    echo -n $"Starting Tomcat: (Engine) "
+    echo
+    cd ${CATALINA_HOME}
+    su - ${CATALINA_USER} -c ". /etc/sysconfig/tomcat_engine; ${CATALINA_HOME}/bin/catalina.sh ${TOMCAT_START}"
+    RETVAL=$?
+    echo
+    [ $RETVAL = 0 ] && touch /var/lock/subsys/tomcat_engine
+    return $RETVAL
+}
+stop() {
+    echo -n $"Stopping Tomcat: (Engine) "
+    echo
+    su - ${CATALINA_USER} -c ". /etc/sysconfig/tomcat_engine; ${CATALINA_HOME}/bin/catalina.sh ${TOMCAT_STOP}"
+    RETVAL=$?
+    sleep 2
+    echo
+    [ $RETVAL = 0 ] && rm -f /var/lock/subsys/tomcat_engine /usr/local/tomcat/actual/instances/engine/logs/catalina.pid
+    rm -rf /usr/local/tomcat/work/*
+}
+# See how we were called.
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  restart)
+        stop
+        start
+        ;;
+  status)
+        status tomcat
+        ;;
+  *)
+        echo "Usage: $0 start|stop|restart"
+        exit 1
+esac
+exit $RETVAL

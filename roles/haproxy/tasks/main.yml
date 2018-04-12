@@ -1,0 +1,53 @@
+# Role to install ha-proxy
+#
+---
+ - name: Install ha-proxy
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+     - haproxy
+
+ - name: Upload haproxy config
+   template:
+     src=haproxy.cfg.j2
+     dest=/etc/haproxy/haproxy.cfg
+   notify:
+    - Reload haproxy
+
+ - name: Start and enable haproxy
+   service: 
+     name=haproxy
+     state=started
+     enabled=yes
+
+ - name: Create rsyslog entry for logging 
+   copy:
+     src=haproxy.conf
+     dest=/etc/rsyslog.d/
+   notify:
+    - Restart rsyslog
+
+ - name: Create log rotation entry 
+   copy:
+     src={{ item }}
+     dest=/etc/logrotate.d/
+   with_items:
+    - haproxy
+    - haproxy-status
+
+ - name: Adjust rsyslog.conf entry to allow this
+   lineinfile:
+     dest=/etc/rsyslog.conf
+     regexp="{{ item }}"
+     line="${{ item }}"
+   with_items:
+    - "ModLoad imudp"
+    - "UDPServerRun 514"
+   notify:
+    - Restart rsyslog
+
+ - name: Restart rsyslog
+   service:
+     name=rsyslog
+     state=restarted

@@ -1,0 +1,24 @@
+# Playbook to create Centos 6 base AMI
+#
+---
+ - name: Build base AMI
+   hosts: localhost
+   vars:
+     packer: true
+     ssh_users:
+        #- jmilner
+        #- apritchardmeaker
+      - jneilson
+      - jenkins-user
+   roles:
+     - { role: nfs-client, tags: [ nfs-client ] }
+     - { role: common, tags: [ common ] }
+     - { role: glp-repo, tags: [ glp-repo ] }
+     - { role: zabbix-agent, tags: [ zabbix-agent ] }
+     - { role: java-8, tags: [ java-8 ] }
+     - { role: ansible-client-prep, tags: [ ansible-client-prep ] }
+     - { role: postfix, tags: [ postfix ] }
+     - { role: ssh-users, tags: [ ssh-users ] }
+     - { role: ssh-config, tags: [ ssh-config ] }
+     - { role: disable-iptables, tags: [ disable-iptables ] }
+     - { role: disable-selinux, tags: [ disable-selinux ] }

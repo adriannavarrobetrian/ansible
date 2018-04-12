@@ -1,0 +1,77 @@
+#---------------------------------------------------------------------
+# Global settings
+#---------------------------------------------------------------------
+global
+	log 127.0.0.1   local0
+        maxconn 8192
+        debug
+        user haproxy
+        group haproxy
+
+defaults
+        log     global
+        mode    http
+        retries 3
+        option redispatch
+        option http-server-close
+        maxconn 20000
+        timeout connect 500000
+        timeout client  5000
+        timeout server  500000
+
+
+#---------------------------------------------------------------------
+# STATS
+#---------------------------------------------------------------------
+
+listen stats :1936
+    mode http
+    stats enable
+    stats hide-version
+    stats realm Haproxy\ Statistics
+    stats uri /stats
+
+#---------------------------------------------------------------------
+# HTTP
+#---------------------------------------------------------------------
+
+listen webfarm 0.0.0.0:80
+        mode http
+        option forwardfor
+        rspadd X-Frame-Options:\ SAMEORIGIN
+        rspadd X-Content-Type-Options:\ nosniff
+        http-request set-header X-Forwarded-Proto https if { ssl_fc }
+        reqadd X-Forwarded-Proto:\ http
+
+{% set group = "web-" ~ ENV %}
+    {% for host in groups[group] %}
+    server {{ hostvars[host]['inventory_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:80 check
+    {% endfor %}
+
+
+#---------------------------------------------------------------------
+# HTTPS
+#---------------------------------------------------------------------
+listen ssl_webfarm
+        bind :444 accept-proxy
+        mode http
+        balance source
+        option tcplog
+
+        acl secure dst_port eq 444
+
+        rspadd X-Frame-Options:\ SAMEORIGIN
+        rspadd X-Content-Type-Options:\ nosniff
+
+        option httpchk
+        option forwardfor
+        http-request add-header X-Forwarded-Proto https if { ssl_fc }
+	rspadd Strict-Transport-Security:\ max-age=31536000
+        reqadd X-Forwarded-Proto:\ https
+        rspirep ^(set-cookie:.*)  \1#;\ Secure
+
+{% set group = "web-" ~ ENV %}
+    {% for host in groups[group] %}
+    server {{ hostvars[host]['inventory_hostname'] }} {{ hostvars[host]['inventory_hostname'] }}:443 check
+    {% endfor %}
+

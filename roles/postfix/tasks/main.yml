@@ -1,0 +1,20 @@
+# Role to install and configure postfix
+# Anton Prithcard-Meaker
+---
+ - name: Install Postfix
+   yum:
+     name=postfix
+     state=present
+  
+ - name: Enable and start Postfix
+   service:
+     name=postfix
+     enabled=yes
+     state=started
+
+ - name: Configure Postfix main.cf
+   lineinfile:
+     dest=//etc/postfix/main.cf
+     line="relayhost = mail.powa.pci"
+   notify:
+     - Restart Postfix

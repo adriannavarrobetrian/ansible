@@ -1,0 +1,26 @@
+COUNT: 1
+SEC_GROUP:
+ - sg-19b53c7e
+ - sg-dc9cf6bb 
+AMI: non-secure 
+TYPE: t2.medium 
+BUILD_KEY: buildscm.pem
+VPC_SUBNET: subnet-8cf149e8 
+TAGS: {Class: "nfs-sb", Name: "{{ inventory_hostname }}", Env: "{{ ENV }}"}
+ENV: sb 
+PUBLIC_IP: no
+PRIV_IP: no
+ZONE: glp
+EC2_ROOT_VOLUME_SIZE: 8
+EC2_LVM_VOLUME_SIZE: 500
+IAM_ROLE: s3_readonly_role
+LVM_PV_DEVICE_LIST: /dev/xvdb
+VOLUMES:
+ - device_name: /dev/sda1
+   volume_size: "{{ EC2_ROOT_VOLUME_SIZE }}"
+   delete_on_termination: true
+ - device_name: /dev/xvdb
+   volume_size: "{{ EC2_LVM_VOLUME_SIZE }}"
+   delete_on_termination: true
+
+ 

@@ -1,0 +1,23 @@
+# Role to install Couchase Server from the Couchbase official repo
+#
+# Dependencies
+# - glp-repo
+---
+ - name: Install Couchbase from glp-repo
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+    - couchbase-server
+
+ - name: Upload init.d script to disable THP as per Couchbase recommendations
+   copy:
+     src=disable-thp
+     dest=/etc/init.d/disable-thp
+     mode=755
+
+ - name: Start and enable disable-thp
+   service:
+     name=disable-thp
+     state=started
+     enabled=yes

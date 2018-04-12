@@ -1,0 +1,48 @@
+ - name: Install required libs
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+    - drbd
+    - drbd-utils
+    - kmod-drbd
+
+ - name: Modprobe to add kernel module
+   modprobe:
+     name=drbd
+     state=present
+
+ - name: Upload config
+   template:
+     src=store.j2
+     dest=/etc/drbd.d/store.res
+
+ - name: Create store
+   command: drbdadm create-md store
+
+ - name: Start and enable drbd
+   service:
+     name=drbd
+     enabled=yes
+     state=started
+
+ - name: Bring up disk
+   command: drbdadm up store
+
+ - name: Sync data from primary (node1)
+   command: /sbin/drbdadm -- --overwrite-data-of-peer primary store
+   when: "'-01' in inventory_hostname"
+
+ - name: Wait for sync to complete
+   wait_for:
+     path=/proc/drbd
+     search_regex="cs:Connected ro:Primary/Secondary"
+     delay=300
+     timeout=900
+   when: "'-01' in inventory_hostname"
+
+ - name: Write filesystem to drbd disk
+   filesystem:
+     fstype=ext4
+     dev=/dev/drbd0
+   when: "'-01' in inventory_hostname"

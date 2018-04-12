@@ -1,0 +1,168 @@
+# TEST play for releases
+---
+ - name: Fetch code
+   hosts: app-{{ ENV }}[0]
+   become: yes
+   gather_facts: False
+   tasks:
+    - name: Retrieve latest release files
+      get_url:
+        url=http://nexus.glp.com/nexus/content/repositories/releases/com/powa/web/powaweb-{{ BRANCH }}/{{ BRANCH }}-{{ VERSION }}/powaweb-{{ BRANCH }}-{{ VERSION }}.tgz
+        dest=/tmp
+      register: file_dl
+    
+    - name: Retrieve latest release file md5
+      get_url:
+        url=http://nexus.glp.com/nexus/content/repositories/releases/com/powa/web/powaweb-{{ BRANCH }}/{{ BRANCH }}-{{ VERSION }}/powaweb-{{ BRANCH }}-{{ VERSION }}.tgz.md5
+        dest=/tmp
+      register: file_dl_md5
+      delegate_to: localhost
+
+    - name: Get md5sum value from Nexus file
+      set_fact:        
+        md5_nexus={{ lookup('file', "/tmp/powaweb-{{ BRANCH }}-{{ VERSION }}.tgz.md5") }}
+      delegate_to: localhost
+
+    - name: Test md5sum 
+      fail:
+        msg="The md5sum from Nexus is different to the downloaded file"
+      when: (md5_nexus != file_dl.md5sum)
+   
+    - name: Cleanup Nexus md5sum file
+      file:
+        path="/tmp/powaweb-{{ BRANCH }}-{{ VERSION }}.tgz.md5"
+        state=absent
+      delegate_to: localhost
+
+ - name: Disable API
+   hosts: mysql-{{ ENV }}[0]
+   become: yes
+   gather_facts: False
+   roles:
+    - disable-api
+
+ - name: Put up holding pages
+   hosts: web-{{ ENV }}
+   become: yes
+   gather_facts: False
+   tasks:
+    - name: Put up holding page
+      command: /root/maintenance on
+
+    - name: Pause to allow holding page to appear
+      pause:
+        seconds=5
+      delegate_to: localhost
+
+    - name: Assess holding page (pre-prod)
+      uri:
+        url=https://admin.{{ ENV }}.gplshops.com
+        follow_redirects=all
+        return_content=yes
+        status_code=200
+      delegate_to: localhost
+      register: holding_page
+
+    - name: Fail if holding page not up
+      fail: msg="under-maintenance did not appear in the returned URL, please investigate"
+      when:
+       - "'under-maintenance' not in holding_page.url"
+      delegate_to: localhost
+
+ - name: Release code
+   hosts: app-{{ ENV }}
+   become: yes
+   gather_facts: False
+   any_errors_fatal: true
+   roles:
+    - release-powerweb
+
+ - name: Run Flyway
+   hosts: app-{{ ENV }}[0]
+   become: yes
+   gather_facts: False
+   any_errors_fatal: true
+   roles:
+    - release-powerweb-flyway
+
+ - name: Start Tomcat
+   hosts: app-{{ ENV }}
+   become: yes
+   gather_facts: False
+   any_errors_fatal: true
+   roles:
+    - tomcat-start
+
+ - name: Take down holding pages
+   hosts: web-{{ ENV }}
+   become: yes
+   gather_facts: False
+   tasks:
+    - name: Take down holding page
+      command: /root/maintenance off
+
+    - name: Pause to allow holding page to be removed
+      pause:
+        seconds=5
+      delegate_to: localhost
+
+    - name: Fetch CMS page for smoke test (pre-prod)
+      uri:
+        url=https://admin.{{ ENV }}.gplshops.com
+        follow_redirects=all
+        return_content=yes
+        status_code=200
+      delegate_to: localhost
+      register: holding_page_off
+
+    - name: Fetch Electrolux page for smoke test (pre-prod)
+      uri:
+        url=http://electrolux.{{ ENV }}.gplshops.com/
+        follow_redirects=all
+        return_content=yes
+        status_code=200
+      delegate_to: localhost
+      register: holding_page_off_elec
+
+    - name: Smoke tests - CMS url
+      fail: msg="admin.{{ ENV }}.gplshops.com did not appear in fetched URL"
+      when: 
+       - "'admin.{{ ENV }}.gplshops.com' not in holding_page_off.url"
+      delegate_to: localhost
+
+    - name: Smoke tests - CMS body content
+      fail: msg="Greenlight Power string did not appear in CMS page body"
+      when:
+       - "'GreenLight Power' not in holding_page_off.content"
+      delegate_to: localhost
+
+    - name: Smoke tests - CMS response code
+      fail: msg="Response code for admin.{{ ENV }}.gplshops.com not 200. Reponse code was{{ ":" }} {{ holding_page_off_elec.status }}"
+      when:
+       - "holding_page_off.status != 200"
+      delegate_to: localhost
+
+    - name: Smoke tests - Electrolux url
+      fail: msg="electrolux.{{ ENV }}.gplshops.com did not appear in fetched URL"
+      when:
+       - "'electrolux.{{ ENV }}.gplshops.com' not in holding_page_off_elec.url"
+      delegate_to: localhost
+
+    - name: Smoke tests - Electrolux body content
+      fail: msg="Electrolux string did not appear in Electrolux test page body"
+      when:
+       - "'Electrolux' not in holding_page_off_elec.content"
+      delegate_to: localhost
+
+    - name: Smoke tests - Electrolux response code
+      fail: msg="Response code for electrolux.{{ ENV }}.gplshops.com not 200. Reponse code was{{ ":" }} {{ holding_page_off_elec.status }}"
+      when:
+       - "holding_page_off_elec.status != 200"
+      delegate_to: localhost
+
+ - name: Enable API
+   hosts: mysql-{{ ENV }}[0]
+   become: yes
+   gather_facts: False
+   roles:
+    - enable-api

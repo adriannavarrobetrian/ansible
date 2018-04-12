@@ -1,0 +1,21 @@
+#!/bin/bash
+
+mode=$1
+
+if [ -z $mode ]
+then
+   echo "Usage: maintenace on|off"
+   exit
+fi
+
+if [ $mode == "on" ]
+then
+   ln -sf /etc/httpd/conf.d/maintenance.conf /etc/httpd/conf.d/rewrite.conf
+elif [ $mode == "off" ]
+then
+   ln -sf /etc/httpd/conf.d/normal.conf /etc/httpd/conf.d/rewrite.conf
+else
+   echo "$mode: Invalid mode."
+   exit
+fi
+/etc/init.d/httpd restart

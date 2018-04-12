@@ -1,0 +1,77 @@
+# Role to install Squid for the Powerweb outbound internet proxy (PCI requirement)
+#
+#
+---
+ - name: Install squid
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+    - squid
+    - squid-helpers
+
+ - name: Put dirs in place
+   file:
+     path=/etc/squid/{{ item }}
+     state=directory
+   with_items:
+    - acl 
+    - ssl
+    - srv
+
+ - name: Copy squid ssl crt and key
+   copy:
+     src={{ item.file }}
+     dest=/etc/squid/ssl/
+     mode={{ item.mode }}
+     owner=squid
+     group=squid
+   with_items:
+    - { "file": "squid.crt", "mode": "644" }
+    - { "file": "squid.key", "mode": "600" }
+
+ - name: Generate squid ssl db
+   command: /usr/lib64/squid/ssl_crtd -c -s /var/spool/squid/ssldb
+
+ - name: Upload Squid ACLs
+   copy:
+     src={{ item }}
+     dest=/etc/squid/acl
+   with_items:
+    - powaweb_app_dst_ip_http.acl
+    - powaweb_app_dst_ip_https.acl
+    - powaweb_app_regex.acl
+
+ - name: Get ENI Facts
+   ec2_eni_facts:
+     region: eu-west-1
+     filters:
+       private-ip-address: "{{ ansible_default_ipv4.address }}"
+   delegate_to: localhost
+   become: no
+   register: eni
+
+ - name: Upload squid srv configs
+   copy:
+     src={{ item }}
+     dest=/etc/squid/srv
+   with_items:
+    - powaweb_app.list
+
+ - name: Set pinger perms so squid can run it
+   file:
+     path=/usr/lib64/squid/pinger
+     mode=755
+
+ - name: Start and Enable Squid
+   service:
+     name=squid
+     state=started
+     enabled=yes
+
+ - name: Upload Proxy Configs
+   template:
+     src=squid.conf.j2
+     dest=/etc/squid/squid.conf
+   notify:
+    - Restart squid

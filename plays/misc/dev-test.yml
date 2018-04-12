@@ -1,0 +1,17 @@
+# Test Playbook to set up Dev/Test Servers
+# Anton Pritchard-Meaker
+---
+ - name: Build Dev/Test Server
+   hosts: all
+   vars:
+     email_prefix: antonpritchard-meaker 
+   roles:
+     - { role: java, tags: [ java ] }
+     - { role: mysql5.5, tags: [ mysql5.5 ] }
+     - { role: tomcat, tags: [ tomcat ] }
+     - { role: apache, tags: [ apache ] }
+     - { role: activemq, tags: [ activemq ] }
+     - { role: gradle, tags: [ gradle ] }
+     - { role: dev-hosts-entry, tags: [ dev-hosts-entry ] }
+     - { role: git, tags: [ git ] }
+     - { role: postfix, tags: [ postfix ] }

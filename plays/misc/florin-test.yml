@@ -1,0 +1,17 @@
+# Playbook to launch test mysql server for rlukosevicius
+---
+ - name: Launch Instance
+   hosts: florin-test.test.glp 
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Set up MySQL
+   hosts: florin-test.test.glp
+   vars:
+     ssh_users:
+      - "fmoraru"
+   become: yes
+   roles:
+    - common
+    - ssh-users

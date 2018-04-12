@@ -1,0 +1,42 @@
+#!/bin/sh
+#
+# Startup script for serverrmiconsole
+#
+# chkconfig: 2345 91 11
+# description: serverrmiconsole
+# processname:
+# config: /usr/local/serverrmiconsole/conf/hermes.xml
+#
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+# See how we were called.
+case "$1" in
+        start)
+                echo -n "Starting serverrmiconsole: "
+                su -l rmiuser -c "/usr/local/serverrmiconsole/bin/startconsole.sh"
+                echo
+                touch /var/lock/subsys/serverrmiconsole
+                ;;
+        stop)
+                echo -n "Shutting down serverrmiconsole: "
+                su -l rmiuser -c "/usr/local/serverrmiconsole/bin/stopconsole.sh"
+                echo
+                rm -f /var/lock/subsys/serverrmiconsole
+                ;;
+        restart)
+                $0 stop
+                $0 start
+                ;;
+        *)
+                echo -n "Usage: $0 {start|stop|restart}"
+                echo
+esac
+
+if [ $# -gt 1 ]; then
+        shift
+        $0 $*
+fi
+
+exit 0

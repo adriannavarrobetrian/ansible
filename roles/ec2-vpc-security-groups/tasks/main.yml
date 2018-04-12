@@ -1,0 +1,23 @@
+# Role to create ec2 security groups
+#
+#
+---
+ - name: Get VPC facts
+   ec2_vpc_net:
+     region: "{{ REGION }}"
+     name: "{{ ENV }}-powerweb-{{ REGION }}"
+     state: present
+     cidr_block: "{{ CIDR }}"
+   register: vpc
+
+ - name: Create security group
+   ec2_group:
+     name: "{{ ENV}}-{{ REGION }}-{{ item.key }}"
+     description: "{{ item.value.description }}"
+     vpc_id: "{{ vpc.vpc.id }}"
+     region: "{{ REGION }}"
+     rules: "{{ item.value.rules_inbound }}"
+     rules_egress: "{{ item.value.rules_outbound }}"
+   with_dict:
+     "{{ SEC_RULES }}"
+     

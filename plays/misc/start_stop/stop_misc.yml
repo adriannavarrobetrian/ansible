@@ -1,0 +1,9 @@
+---
+ - name: Stop florin-test.test.glp
+   hosts: florin-test.test.glp
+   vars:
+     group: florin-test
+     ports: 
+      - 22
+   roles:
+    - server-stop

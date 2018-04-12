@@ -1,0 +1,76 @@
+# Role to install corrosync
+#
+# Depends on:
+# - corosync
+---
+ - name: Get ENI Facts
+   ec2_eni_facts:
+     region: eu-west-1
+     filters:
+       private-ip-address: "{{ ansible_ec2_local_ipv4 }}"
+   delegate_to: localhost
+   become: no
+   register: eni
+
+ - name: Assign secondary Private IP
+   command: aws ec2 assign-private-ip-addresses --network-interface-id {{ eni.interfaces.0.id }} --secondary-private-ip-address-count 1
+   delegate_to: localhost
+   become: no
+   when: ansible_eth0_0 is not defined
+
+ - name: Nasty hack to get secondary IP
+   shell: "aws ec2 describe-network-interfaces --network-interface-ids {{ eni.interfaces.0.id }} | grep -A1 false | grep PrivateIpAddress | cut -d'\"' -f4"
+   register: secondary_ip
+   delegate_to: localhost
+   become: no
+
+ - name: Create secondary IP networking config
+   template:
+     src=ifcfg.j2
+     dest="/etc/sysconfig/network-scripts/ifcfg-eth0:0"
+   register: network_config
+
+ - name: Reload Network
+   service:
+     name=network
+     state=reloaded
+   when: network_config.changed
+
+ - name: Restart corosync after network reload
+   service:
+     name=corosync
+     state=restarted
+     enabled=yes
+   when: network_config.changed
+
+ - name: Pause to allow corosync to start
+   pause: 
+     seconds=20
+
+ - name: Make ec2 resource dir
+   file:
+     path=/usr/lib/ocf/resource.d/ec2/
+     state=directory
+
+ - name: Upload EC2 VIP script
+   template:
+     src=elastic-ip.j2
+     dest=/usr/lib/ocf/resource.d/ec2/elastic-ip
+     mode=u+x
+
+ - name: Set Standard settings for corosync
+   shell: "{{ item }}"
+   with_items:
+    - "crm configure property no-quorum-policy=ignore"
+    - "crm configure property stonith-enabled=false"
+    - "crm configure rsc_defaults resource-stickiness=100"
+   when: "'01' in inventory_hostname"
+
+ - name: Enable required Services
+   command: "{{ item }}"
+   with_items:
+    - "crm configure primitive elastic-ip ocf:ec2:elastic-ip op monitor timeout=90 interval=90 on-fail=restart failure-timeout=60s op start timeout=40s interval=0 op stop timeout=60s interval=0 meta is-managed=true resource-stickiness=100 failure-timeout=90 target-role=Started migration-threshold=5"
+    - "crm configure primitive haproxy lsb:haproxy meta target-role=Started"
+    - "crm configure primitive stunnel lsb:stunnel meta target-role=Started"
+    - "crm configure group {{ ENV }}_lb stunnel haproxy elastic-ip"
+   when: "'01' in inventory_hostname"

@@ -1,0 +1,17 @@
+COUNT: 1
+SEC_GROUP: sg-19b53c7e
+AMI: non-secure 
+TYPE: t2.medium 
+BUILD_KEY: buildscm.pem
+VPC_SUBNET: subnet-73ab0d17
+TAGS: {Class: "mysql-rich-test", Name: "{{ inventory_hostname }}", Env: "{{ ENV }}"}
+ENV: test 
+ZONE: glp
+PUBLIC_IP: no
+PRIV_IP: no
+IAM_ROLE: no
+EC2_ROOT_VOLUME_SIZE: 80
+VOLUMES:
+ - device_name: /dev/sda1
+   volume_size: "{{ EC2_ROOT_VOLUME_SIZE }}"
+   delete_on_termination: true

@@ -1,0 +1,14 @@
+# Playbook to spawn an openvpn server
+ - name: Create VPN server
+   hosts: openvpn-servers
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Install OpenVPN
+   hosts: openvpn-servers
+   gather_facts: yes
+   become: yes
+   roles:
+    - { role: openvpn-server, tags: openvpn-server }
+    - zabbix-agent-start

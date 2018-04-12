@@ -1,0 +1,11 @@
+# Playbook to set up users with admin access via ssh
+---
+ - name: Create ssh access
+   hosts: all
+   become: yes
+   vars:
+     ssh_users:
+      - "anavarro"
+      - "ameaker"
+   roles:
+    - /etc/ansible/roles/ssh-users

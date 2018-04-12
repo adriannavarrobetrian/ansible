@@ -1,0 +1,8 @@
+DB_NAME: zabbix
+DB_ENGINE_VERSION: 5.6
+DB_INSTANCE_NAME: zabbix-prod-mysql-1
+DB_INSTANCE_TYPE: db.m4.large
+DB_SIZE: 60
+DB_TAGS: {Class: "zabbix-server-db", Name: "{{ DB_INSTANCE_NAME }}", Env: "{{ ENV }}"}
+DB_SUBNET: admin-rds-subnet
+DB_CHAR_SET: no

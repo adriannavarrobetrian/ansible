@@ -1,0 +1,12 @@
+---
+ - name: Add required Repos
+   copy:
+     src={{ item }}
+     dest=/etc/yum.repos.d/
+   with_items:
+    - CentOS-Powa.repo
+    - CentOS-Base.repo
+    - CentOS-Upstream.repo
+    - glp-repo.repo
+    - epel.repo
+    - zabbix.repo

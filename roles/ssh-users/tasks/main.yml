@@ -1,0 +1,68 @@
+# Role to add ssh users for sudo access
+---
+ - name: Create users in group wheel for OS family RedHat - sudo access
+   user:
+     name={{ item }}
+     state=present
+     groups=wheel
+   with_items:
+    - "{{ ssh_users }}"
+   when: 
+     - ansible_os_family == "RedHat"
+       #- "{{ item }} in ADMIN_USERS"
+ 
+ - name: Create users for OS family RedHat - NO sudo access
+   user:
+     name={{ item }}
+     state=present
+     shell=/bin/bash
+   with_items:
+    - "{{ ssh_users }}"
+   when: 
+     - ansible_os_family == "RedHat"
+       #- "{{ item }} not in ADMIN_USER"
+
+ - name: Create users in group sudo for Ubuntu - sudo access
+   user:
+     name={{ item }}
+     state=present
+     groups=sudo
+   with_items:
+    - "{{ ssh_users }}"
+   when: 
+     - ansible_distribution == "Ubuntu" 
+       #- item in ADMIN_USERS
+
+ - name: Create users for Ubuntu - NO sudo access
+   user:
+     name={{ item }}
+     state=present
+   with_items:
+    - "{{ ssh_users }}"
+   when: 
+     - ansible_distribution == "Ubuntu"
+       #- item not in ADMIN_USERS
+
+ - name: Create users .ssh dir
+   file:
+     path=/home/{{ item }}/.ssh
+     state=directory
+     mode=700
+     owner={{ item }}
+     group={{ item }}
+   with_items:
+     - "{{ ssh_users }}"
+
+ - name: Upload users pub key
+   copy:
+	 src=pub_keys/{{ item }}.pub
+     dest=/home/{{ item }}/.ssh/authorized_keys
+     mode=644
+     owner={{ item }}
+     group={{ item }}
+   with_items:
+     - "{{ ssh_users }}"
+
+# - name: Include revoke role
+#   include: /etc/ansible/roles/ssh-users-revoke/tasks/main.yml
+#   when: packer is not defined

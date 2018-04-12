@@ -1,0 +1,49 @@
+# --- PowaWeb Bazaarvoice SEO Integration (SYS-6017)
+^https://seo.bazaarvoice.com/.*$
+^http://electrolux.ugc.bazaarvoice.com/.*$
+# --- Outbound to PayPal API (SYS-774)
+^https://paypal.com/.*$
+^https://www.paypal.com/.*$
+# --- Product Image Import from eBay shop (SYS-1441)
+^http://i.ebayimg.com/.*$
+# --- Outbound HTTPS (Electrolux Exploded Diagrams) (SYS-903)
+^https://procorner.electrolux.com/.*$
+# --- Product Publish to Google Merchant Center (SYS-6369)
+^https://content.googleapis.com/.*$
+# ---  Google Merhcant Centre API Authentication (GPB-30)
+^https://www.googleapis.com/.*$
+^https://accounts.google.com/.*$
+# --- Customer Image Import from AWS S3 (SYS-6413)
+^https://s3-eu-west-1.amazonaws.com/.*$
+# --- Outbound to www.fragrancex.com (SYS-6273)
+^http://www.fragrancex.com/.*$
+^https://www.fragrancex.com/.*$
+# --- Customer Image Import (SYS-3150)
+^http://static.frooition.com/.*$
+^http://my.frooition.com/.*$
+^http://cdn.frooition.com/.*$
+# --- Outbound to apisecure.spirit-web.co.uk (SYS-2025)
+^http://apisecure.spirit-web.co.uk/.*$
+^https://apisecure.spirit-web.co.uk/.*$
+# --- Outbound to harpercollins.fetchapp.com (SYS-2032)
+^https://harpercollins.fetchapp.com/.*$
+# --- Outbound to keenkite.fetchapp.com (PAM-1814)
+^https://keenkite.fetchapp.com/.*$
+# --- Outbound to Barclaycard ePDQ
+^https://secure.ogone.com/.*$
+# --- Outbound to PayON
+^https://ctpe.net/payment/.*$
+# --- Outbound to promotion WebService
+^https://promotion-prod.powaweb.io/.*$
+# --- ELX Image Import from AWS S3
+^http://elximages.s3.amazonaws.com/.*$
+# --- Powaweb Promotion ELB
+^http://powaweb-promotion-1886430941.eu-west-1.elb.amazonaws.com/.*$
+^http://ip.3dns.ws/.*$
+# --- Amazon EC2 API
+^http://eu-west-1.ec2.amazonaws.com/.*$
+^https://eu-west-1.ec2.amazonaws.com/.*$
+^http://ec2.eu-west-1.amazonaws.com/.*$
+^https://ec2.eu-west-1.amazonaws.com/.*$
+# --- Harper Collins Images (GPB-185)
+^http://images.harpercollins.co.uk/.*$

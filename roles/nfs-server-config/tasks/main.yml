@@ -1,0 +1,74 @@
+ - name: create groups
+   group: 
+     name="{{ item.group }}"
+     gid="{{ item.gid }}"
+   with_items:
+    - { group: tomcat, gid: 5502 }
+    - { group: exim,   gid: 93   }
+
+ - name: create users
+   user: 
+     name="{{ item.user }}" 
+     uid="{{ item.uid }}" 
+     group="{{ item.group }}"
+   with_items:
+    - { user: tomcat, uid: 5502, group: tomcat }
+    - { user: exim,   uid: 93,   group: exim   }
+
+ - name: copy /etc/exports
+   template: 
+     src=exports.j2 
+     dest=/etc/exports 
+     owner=root 
+     group=root
+
+ - name: create NFS directory
+   file:
+     path=/store/nfs 
+     state=directory
+
+ - name: create NFS directory structure
+   file: 
+     path=/store/nfs/{{ item.dir }} 
+     state=directory 
+     owner="{{ item.owner }}"
+     group="{{ item.group }}"
+   with_items:
+     - { dir: js-release, owner: tomcat, group: root   }
+     - { dir: tomcat,     owner: tomcat, group: tomcat }
+     - { dir: web,        owner: root,   group: root   }
+     - { dir: mailbox,    owner: exim,   group: exim   }
+
+ - name: create NFS directory structure (tomcat)
+   file: 
+     path=/store/nfs/tomcat/resources/{{ item }} 
+     state=directory 
+     owner=tomcat 
+     group=tomcat
+   with_items:
+    - cms
+    - engine
+    - file
+
+ - name: create NFS directory (template)
+   file: 
+     path=/store/nfs/tomcat/template/WEB-INF/template 
+     state=directory 
+     owner=tomcat 
+     group=tomcat
+
+ - name: create NFS mount points on NFS (web)
+   file: 
+     path=/store/nfs/web/{{ item }} 
+     state=directory 
+   with_items:
+    - cms_resource
+    - engine_resource
+    - file
+    - template
+
+ - name: Ensure nfs is running.
+   service: 
+     name=nfs 
+     state=restarted 
+     enabled=no

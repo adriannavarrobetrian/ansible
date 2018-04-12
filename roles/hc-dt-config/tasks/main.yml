@@ -1,0 +1,67 @@
+# Role to configure the Harper Collins Data Transformer Servers
+---
+ - name: Install required libs and packages
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+    - php
+    - ncftp
+
+ - name: Create the collins user
+   user:
+     name=collins
+     state=present
+     home=/data/collins/
+     
+ - name: Create required directories
+   file:
+     path=/data/collins{{ item }}
+     state=directory
+     owner=collins
+     group=collins
+   with_items:
+    - "/code"
+    - "/code"
+    - "/code/fetch_products"
+    - "/code/fetch_stock"
+    - "/code/fetch_stock/library"
+    - "/code/fetch_stock/library/default"
+    - "/code/fetch_stock/library/collins"
+    - "/code/transform_orders"
+    - "/code/transform_orders/library"
+    - "/code/transform_orders/library/default"
+    - "/code/transform_orders/library/collins"
+    - "/config/"
+    - "/config/prod"
+    - "/config/test"
+    - "/config/sandbox"
+    - "/orders"
+    - "/orders/prod"
+    - "/orders/test"
+    - "/orders/"
+    - "/products"
+    - "/products/prod"
+    - "/products/prod/data/"
+    - "/products/prod/processed"
+    - "/products/prod/results"
+    - "/products/prod"
+    - "/products/test/data/"
+    - "/products/test/processed"
+    - "/products/test/results"
+    - "/products/sandbox"
+    - "/products/sandbox/data/"
+    - "/products/sandbox/processed"
+    - "/products/sandbox/results"
+    - "/products/processed"
+    - "/products/processed/prod"
+    - "/products/processed/test"
+    - "/products/processed/sandbox"
+    - "/products/results"
+    - "/products/results/prod"
+    - "/products/results/test"
+    - "/products/results/sandbox"
+    - "/logs"
+    - "/logs/prod"
+    - "/logs/test"
+    - "/logs/sandbox"

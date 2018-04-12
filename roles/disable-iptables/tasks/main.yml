@@ -1,0 +1,9 @@
+# Role to disable iptables
+#
+#
+---
+ - name: Stop and disable iptables service
+   service:
+     name=iptables
+     enabled=no
+     state=stopped

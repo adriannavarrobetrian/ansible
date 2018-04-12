@@ -1,0 +1,24 @@
+#-------------------------
+# Export master directory
+#-------------------------
+/store/nfs					*(rw,no_root_squash,no_all_squash,sync)
+
+#--------------------
+# Exports for Apache
+#--------------------
+/store/nfs/web					*(ro,no_root_squash,no_all_squash,sync)
+/store/nfs/tomcat/template/WEB-INF/template	*(ro,no_root_squash,no_all_squash,sync)
+/store/nfs/tomcat/resources/file		*(ro,no_root_squash,no_all_squash,sync)
+/store/nfs/tomcat/resources/cms			*(ro,no_root_squash,no_all_squash,sync)
+/store/nfs/tomcat/resources/engine		*(ro,no_root_squash,no_all_squash,sync)
+
+#--------------------
+# Exports for Tomcat
+#--------------------
+/store/nfs/tomcat				*(rw,no_root_squash,no_all_squash,sync)
+/store/nfs/js-release				*(ro,no_root_squash,no_all_squash,sync)
+
+#------------------
+# Exports for Exim
+#------------------
+/store/nfs/mailbox				*(rw,no_root_squash,no_all_squash,sync)

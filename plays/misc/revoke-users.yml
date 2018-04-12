@@ -1,0 +1,8 @@
+#Play to remove ssh-users
+---
+
+  - name: Remove users
+    hosts: all
+    become: yes
+    roles:
+    -  ssh-users-revoke

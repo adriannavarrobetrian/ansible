@@ -1,0 +1,104 @@
+---
+ - name: Start NFS Servers
+   connection: local
+   gather_facts: false
+   hosts: nfs-sb
+   vars:
+     ports:
+      - 22
+      - 2049
+     group: sandbox-servers
+   roles:
+    - server-start
+
+ - name: Start DB Servers
+   connection: local
+   gather_facts: false
+   hosts: mysql-sb
+   vars:
+     ports:
+      - 22
+      - 3306
+     group: sandbox-servers
+   roles:
+    - server-start
+
+ - name: Start Search Cache Servers
+   connection: local
+   gather_facts: false
+   hosts: search-cache-sb
+   vars:
+     ports:
+      - 80
+     group: sandbox-servers
+   roles:
+    - server-start
+
+ - name: Start MQ Servers
+   connection: local
+   gather_facts: false
+   hosts: mq-sb
+   vars:
+     ports:
+      - 22
+      - 61616
+     group: sandbox-servers
+   roles:
+    - server-start
+
+ - name: Start App Servers
+   connection: local
+   gather_facts: false
+   hosts: app-sb
+   vars:
+     ports:
+      - 22
+     group: sandbox-servers
+   roles:
+    - server-start
+
+ - name: Start Web Servers
+   connection: local
+   gather_facts: false
+   hosts: web-sb
+   vars:
+     ports:
+      - 22
+      - 80
+      - 443
+     group: sandbox-servers
+   roles:
+    - server-start
+
+ - name: Start Load Balancers
+   connection: local
+   gather_facts: false
+   hosts: lb-sb
+   vars:
+     ports:
+      - 22
+      - 80
+      - 443
+     group: sandbox-servers
+   roles:
+    - server-start
+
+## Post Task to Start Tomcat
+
+ - name: Start Tomcat
+   gather_facts: false
+   become: yes
+   hosts: app-sb
+   roles:
+    - tomcat-start 
+
+## Post Task to Ensure Env is Responding
+
+ - name: Call Sandbox Env URL
+   hosts: localhost
+   connection: local
+   tasks:
+     - name: Test URL
+       uri:
+         url=http://www.electronics.sb.gplshops.com/index.html
+         status_code=200

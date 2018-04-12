@@ -1,0 +1,10 @@
+---
+ - name: Restart Openvpn
+   service:
+     name=openvpn
+     state=restarted
+
+ - name: Restart Iptables
+   service:
+     name=iptables
+     state=restarted

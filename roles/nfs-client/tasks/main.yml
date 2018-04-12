@@ -1,0 +1,8 @@
+---
+ - name: install NFS packages
+   yum: 
+     name={{ item }}
+     state=present
+   with_items:
+    - nfs-utils
+    - nfs-utils-lib 

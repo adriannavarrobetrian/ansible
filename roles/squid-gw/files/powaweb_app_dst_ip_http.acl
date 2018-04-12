@@ -1,0 +1,53 @@
+# --- Access to ClamAV mirrors
+163.1.0.0/16
+193.1.193.0/25
+217.135.32.0/24
+81.91.100.160/27
+# --- Locayta/Attraqt Publishing (Search Index Service) (SYS-845,SYS-3605,SYS-6489)
+206.151.128.0/17
+206.132.43.133
+206.132.43.134
+206.132.43.135
+206.132.43.136
+206.132.43.137
+206.132.43.138
+185.42.64.16
+206.142.240.129
+206.142.240.136
+206.142.240.137
+206.142.240.237
+# --- Outbound HTTP and HTTPS to Google (SEO) (SYS-578)
+173.194.0.0/16
+74.125.0.0/16
+216.58.192.0/19
+# --- Outbound to DropBox (used by customers in their templates) (SYS-578)
+199.47.216.0/29
+207.171.160.0/19
+66.228.118.0/24
+50.16.0.0/13
+# --- Outbound to Pay.ON
+212.111.45.0/24
+213.131.239.32/27
+# --- Outbound to Terracotta (Cache updates) (SYS-578)
+64.95.112.0/24
+# --- Outbound to Frooition (used by customers in their templates) (SYS-578)
+23.21.76.14
+# --- Outbound to Sesame (Electrolux Bagfinder functionality) (SYS-578)
+195.88.131.0/24
+# --- Barclays ePDQ payment gateway for new Essential Plus Integration (SYS-641)
+84.233.249.0/24
+213.254.248.0/24
+62.72.112.0/24
+84.199.92.0/24
+# --- Mega Image Marker functionality (SYS-804)
+54.217.225.21
+# --- XML Validation Workaround (Temporary) (SYS-821)
+54.240.176.62
+# --- Cosmeticfactory.co.uk CSV import (customer requested whitelisting) (SYS-645)
+82.165.122.104
+# --- harperandlewisvintage.co.uk image import (customer requested whitelisting) (CS-204)
+95.142.156.33
+# --- sofurniture.co.uk image imports (customer requested whitelisting) (SYS-4886)
+82.71.204.27
+# ---Temp addition for hoover images import
+52.30.177.115

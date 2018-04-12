@@ -1,0 +1,11 @@
+{% for site in domains_static%}
+Include conf.d/domains_static/{{ site }}.conf
+{% endfor %}
+
+# Dummy 443 vhost
+
+NameVirtualHost {{ ansible_default_ipv4.address }}:443
+<VirtualHost {{ ansible_default_ipv4.address }}:443>
+
+</VirtualHost>
+

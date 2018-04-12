@@ -1,0 +1,8 @@
+# ELB creation for the Test promotions service
+#
+#
+---
+ - name: Create ELB
+   hosts: promo-app-test
+   roles:
+    - ec2-elb-internal    

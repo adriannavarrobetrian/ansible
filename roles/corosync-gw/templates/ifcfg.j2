@@ -1,0 +1,5 @@
+DEVICE=eth0:0
+IPADDR={{ eni_2.network_interfaces.0.private_ip_addresses.1.private_ip_address }}
+NETMASK={{ ansible_default_ipv4.netmask }}
+ONBOOT=yes
+NAME=eth0:0

@@ -1,0 +1,67 @@
+# Role to install stunnel
+#
+# This will install stunnel and provide "base" cert needed to for stunnel to establish an https listener
+# Additional "non-dynamic" certs can be uploaded via the ssl_dict variable held in group_vars (in the vault)
+# All other certs to be uploaded via Server Updater
+#
+---
+ - name: Upload stunnel
+   copy:
+     src=stunnel-5.23-1.x86_64.rpm
+     dest=/tmp
+   register: stunnel_rpm
+
+ - name: Install stunnel rpm
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+     - "{{ stunnel_rpm.dest }}"
+
+ - name: Create conf.d and cert.d dirs
+   file:
+     path=/etc/stunnel/{{ item }}
+     state=directory
+   with_items:
+     - "cert.d"
+     - "conf.d"
+
+ - name: Remove stunnel rpm file
+   file:
+     path="{{ stunnel_rpm.dest }}"
+     state=absent
+
+ - name: Upload gplshops ssl cert as base https for stunnel
+   template:
+     src=gplshops.com.pem.j2
+     dest=/etc/stunnel/gplshops.com.pem
+   notify:
+    - Reload stunnel
+
+ - name: Upload site ssl certs
+   copy:
+     content={{ item.value.pem }}
+     dest=/etc/stunnel/{{ item.key }}.pem
+     mode=640
+   with_dict:
+     "{{ ssl_dict }}"
+   notify:
+    - Reload stunnel
+
+ - name: Upload stunnel config
+   template:
+     src=stunnel.conf.j2
+     dest=/etc/stunnel/stunnel.conf
+   notify:
+    - Reload stunnel
+
+ - name: Remove sample config
+   file:
+     path=/etc/stunnel/stunnel.conf-sample
+     state=absent
+
+ - name: Start and enable stunnel
+   service: 
+     name=stunnel
+     state=started
+     enabled=yes

@@ -1,0 +1,9 @@
+{% for item in dns_zones %}
+zone "{{ item }}" {
+        type slave;
+        file "/var/named/zone/{{ item }}";
+        masters {
+                {{ hostvars[master]['ansible_eth0']['ipv4']['address'] }};
+        };
+};
+{% endfor %}

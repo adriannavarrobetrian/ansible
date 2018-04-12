@@ -1,0 +1,81 @@
+#
+# workers.properties
+#
+
+# In Unix, we use forward slashes:
+ps=/
+
+# List the workers by name
+worker.list=tomcat-lb-cms,tomcat-lb-engine,jk-status
+
+
+{% set group = "app-" ~ ENV %}
+    {% for host in groups[group] %}
+
+# ------------------
+#   tomcat-{{ loop.index }}-cms
+# ------------------
+
+
+worker.tomcat-{{ loop.index }}-cms.port=8009
+worker.tomcat-{{ loop.index }}-cms.host={{ hostvars[host]['inventory_hostname'] }} 
+worker.tomcat-{{ loop.index }}-cms.type=ajp13
+
+worker.tomcat-{{ loop.index }}-cms.lbfactor=1
+
+worker.tomcat-{{ loop.index }}-cms.connect_timeout=5000
+worker.tomcat-{{ loop.index }}-cms.prepost_timeout=5000
+
+worker.tomcat-{{ loop.index }}-cms.connection_pool_timeout=600
+worker.tomcat-{{ loop.index }}-cms.socket_keepalive=True
+
+# ----------------------
+#   tomcat-{{ loop.index }}-engine
+# ----------------------
+
+worker.tomcat-{{ loop.index }}-engine.port=8011
+worker.tomcat-{{ loop.index }}-engine.host={{ hostvars[host]['inventory_hostname'] }}
+worker.tomcat-{{ loop.index }}-engine.type=ajp13
+
+worker.tomcat-{{ loop.index }}-engine.lbfactor=1
+
+worker.tomcat-{{ loop.index }}-engine.connect_timeout=5000
+worker.tomcat-{{ loop.index }}-engine.prepost_timeout=5000
+
+worker.tomcat-{{ loop.index }}-engine.connection_pool_timeout=600
+worker.tomcat-{{ loop.index }}-engine.socket_keepalive=True
+
+{% endfor %}
+
+# -----------------------------------
+#   tomcat-ld-cms (Load Balancer)
+# -----------------------------------
+
+worker.tomcat-lb-cms.type=lb
+#worker.tomcat-lb-cms.balance_workers=tomcat-1-cms,tomcat-2-cms
+worker.tomcat-lb-cms.balance_workers=tomcat-1-cms
+#worker.tomcat-lb-cms.balance_workers=tomcat-2-cms
+worker.tomcat-lb-cms.sticky_session=1
+
+
+# --------------------------------------
+#   tomcat-ld-engine (Load Balancer)
+# --------------------------------------
+
+worker.tomcat-lb-engine.type=lb
+#worker.tomcat-lb-engine.balance_workers=tomcat-1-engine,tomcat-2-engine
+worker.tomcat-lb-engine.balance_workers=tomcat-1-engine
+#worker.tomcat-lb-engine.balance_workers=tomcat-2-engine
+worker.tomcat-lb-engine.sticky_session=1
+
+# =================
+#   status worker
+# =================
+
+worker.jk-status.type=status
+worker.jk-status.read_only=True
+
+#
+# END workers.properties
+#
+

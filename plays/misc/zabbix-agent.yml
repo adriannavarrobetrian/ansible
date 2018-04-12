@@ -1,0 +1,7 @@
+# Play to get zabbix-agent installed
+
+ - name: Install and configure zabbix-agent
+   hosts: jenkins-app-02.prod.glp
+   become: yes
+   roles:
+    - zabbix-agent

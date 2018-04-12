@@ -1,0 +1,8 @@
+ADMIN_USERS: 
+  #- jmilner
+  #- apritchardmeaker
+  #- jneilson
+  - jenkins-user
+  - anavarro
+  - ameaker
+  - rlukosevicius

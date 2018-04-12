@@ -1,0 +1,123 @@
+---
+- hosts: nexus
+  remote_user: ec2-user
+  vars:
+    - download_dir: /tmp
+    - nexus_version: 2.12.0-01
+    - nexus_download_url: "http://download.sonatype.com/nexus/oss/nexus-{{ nexus_version }}-bundle.tar.gz"
+    - nexus_package: "{{ download_dir }}/nexus-{{ nexus_version }}-bundle.tar.gz"
+    - java_download_url: http://download.oracle.com/otn-pub/java/jdk/8u73-b02/jdk-8u73-linux-x64.rpm
+    - java_package: "{{ download_dir }}/jdk-8u73-linux-x64.rpm"
+
+  tasks:
+    - name: create nexus group
+      group: name=nexus state=present
+      sudo: True
+
+    - name: create nexus user
+      user: name=nexus comment="Nexus" group=nexus createhome=yes
+      sudo: True
+
+    - name: create LVM volume group
+      lvg: vg=nexus_vg pvs=/dev/xvdb pesize=4
+      sudo: True
+
+    - name: create LVM
+      lvol: vg=nexus_vg lv=store size=399g
+      sudo: True
+
+    - name: create filesystem
+      filesystem: fstype=ext4 dev=/dev/nexus_vg/store
+      sudo: True
+
+    - name: create /nexus directory
+      file: path=/nexus state=directory
+      sudo: True
+
+    - name: mount LVM and add to fstab
+      mount: name=/nexus src=/dev/nexus_vg/store fstype=ext4 state=present
+      sudo: True
+
+    - name: install wget
+      yum: name=wget state=latest
+      sudo: True
+
+    - name: install createrepo 
+      yum: name=createrepo state=latest
+      sudo: True
+
+    - name: download java
+      command: "wget -q -O {{ java_package }} --no-check-certificate --no-cookies --header 'Cookie: oraclelicense=accept-securebackup-cookie' {{ java_download_url }} creates={{ java_package }}"
+
+    - name: install Oracle JDK
+      yum: name="{{ java_package }}" state=present
+      sudo: True
+
+    - name: download SonaType Nexus OSS
+      command: "wget -q -O {{ nexus_package }} --no-check-certificate --no-cookies  {{ nexus_download_url }} creates={{ nexus_package }}"
+
+    - name: Unpack Nexus tarbal
+      unarchive: "copy=no src={{ nexus_package }} dest=/nexus creates=/nexus/nexus-{{ nexus_version }}"
+      sudo: True
+
+    - name: Change ownership of nexus folder to the nexus user and nexus group
+      file: path=/nexus owner=nexus group=nexus recurse=yes
+      sudo: True
+
+    - name: Change Nexus user in init script
+      replace: dest="/nexus/nexus-{{ nexus_version }}/bin/nexus" regexp='^#RUN_AS_USER=(.*)$' replace='RUN_AS_USER=nexus'
+      sudo: True
+
+    - name: Change Nexus home in binary file
+      replace: dest="/nexus/nexus-{{ nexus_version }}/bin/nexus" regexp='^NEXUS_HOME=(.*)$' replace='NEXUS_HOME=/nexus/nexus-{{ nexus_version }}'
+      sudo: True
+
+    - name: Copy Nexus binary to /etc/init.d
+      command: "cp /nexus/nexus-{{ nexus_version }}/bin/nexus /etc/init.d/nexus creates=/etc/init.d/nexus"
+      sudo: True
+
+    - name: Make Nexus script executable
+      file: path=/etc/init.d/nexus mode=755
+      sudo: True
+
+    - name: Enable Nexus service
+      service: name=nexus enabled=yes
+      notify: 
+      - restart nexus
+      sudo: True
+
+    - name: ensure iptables is configured to allow nexus traffic (port 8081/tcp)
+      lineinfile: dest=/etc/sysconfig/iptables state=present regexp="^.*INPUT.*tcp.*8081.*ACCEPT" insertafter="^.*INPUT.*ESTABLISHED,RELATED.*ACCEPT" line="-A INPUT -m state --state NEW -m tcp -p tcp --dport 8081 -j ACCEPT" backup=yes
+      sudo: True
+
+    - name: ensure forwarding 80 to Nexus 
+      lineinfile: dest=/etc/sysconfig/iptables state=present regexp="^.*PREROUTING.*tcp.*8081" insertbefore="BOF" line="*nat\n:PREROUTING ACCEPT [0:0]\n:OUTPUT ACCEPT [0:0]\n:POSTROUTING ACCEPT [0:0]\n-A PREROUTING -i eth0 -p tcp --dport 80 -j DNAT --to-destination :8081\nCOMMIT" backup=yes
+      sudo: True
+
+    - name: open firewall for nexus 
+      command: /sbin/iptables -I INPUT 1 -p tcp --dport 8081 -j ACCEPT -m comment --comment "Nexus"
+      sudo: True
+ 
+    - name: Allow port 80
+      command: iptables -A INPUT -p tcp -m tcp --dport 8081 -m comment --comment "Allow Nexus" -j ACCEPT
+      sudo: True
+
+    - name: save iptables
+      command: iptables-save
+#    iptables: chain=INPUT in_interface=eth0 protocol=tcp destination_port=8081 jump=ACCEPT comment="Nexus Traffic 8081"
+#    become: yes
+      sudo: True
+
+    - name: redirect http to nexus 
+      iptables: table=nat chain=PREROUTING in_interface=eth0 protocol=tcp match=tcp destination_port=80 jump=REDIRECT to_ports=8081 comment="Nexus Traffic to 8081"
+      notify:
+      - restart iptables
+      sudo: True
+
+  handlers:
+    - name: restart nexus
+      service: name=nexus state=restarted
+      sudo: True
+    - name: restart iptables
+      service: name=iptables state=restarted
+      sudo: True

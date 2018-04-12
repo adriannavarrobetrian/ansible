@@ -1,0 +1,36 @@
+## START Test 
+
+[promo-db-test]
+promo-db-01.test.glp
+
+[promo-app-test]
+promo-app-01.test.glp
+
+[mq-test]
+mq-01.test.glp
+
+[nfs-test]
+nfs-01.test.glp
+
+[mysql-test]
+mysql-01.test.glp
+
+[web-test]
+web-01.test.glp
+web-02.test.glp
+
+[app-test]
+app-01.test.glp
+app-02.test.glp
+
+[lb-test]
+lb-01.test.glp
+lb-02.test.glp
+
+[mx-test]
+mx-01.test.glp
+
+[hc-dt-test]
+hc-dt-01.test.glp
+
+## END Test

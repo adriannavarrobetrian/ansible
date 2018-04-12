@@ -1,0 +1,28 @@
+# Playbook to spawn a mysql server
+ - name: Create MySQL server
+   hosts: mysql-test 
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Setup LVM
+   hosts: mysql-test 
+   become: yes
+   roles:
+     - lvm
+   tasks:
+     - name: create directories on LVM
+       file: path=/store/mysql/var/lib/mysql state=directory 
+     - name: create mysql symlink to LVM
+       file: src=/store/mysql/var/lib/mysql dest=/var/lib/mysql state=link
+
+ - name: Install MySQL 
+   hosts: mysql-test 
+   become: yes
+   roles:
+     - java 
+     - mysql5.1
+     - zabbix-agent-start
+  tasks:
+     - name: change owner of /store/mysql/var/lib/mysql
+       file: dest=/store/mysql/var/lib/mysql owner=mysql group=mysql mode=0775 recurse=yes

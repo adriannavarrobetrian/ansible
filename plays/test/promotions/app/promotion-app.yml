@@ -1,0 +1,18 @@
+# Playbook to create promotions app servers
+---
+ - name: Create instances
+   hosts: promo-app-test
+   connection: local
+   roles:
+    - ec2-instance
+
+ - name: Set up promo app
+   hosts: promo-app-test
+   become: yes
+   roles:
+    - common
+    - zabbix-agent
+    - java-8
+    - glp-repo
+    - powa-user
+    - promotion-app

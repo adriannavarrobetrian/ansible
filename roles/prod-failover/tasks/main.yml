@@ -1,0 +1,4 @@
+---
+
+ - name: Create file in /tmp folder
+   file: path=/tmp/random.txt state:present

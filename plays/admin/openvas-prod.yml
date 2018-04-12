@@ -1,0 +1,15 @@
+# Test play to create openvas server
+#
+#
+---
+ - name: Create Openvas instance
+   hosts: openvas
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Install Openvas
+   hosts: openvas
+   become: yes
+   roles:
+    - openvas

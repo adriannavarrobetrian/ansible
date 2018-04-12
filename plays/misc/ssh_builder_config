@@ -1,0 +1,3 @@
+Host bitbucket.964bidco.com
+User builder
+IdentityFile /home/builder/.ssh/builder_rsa

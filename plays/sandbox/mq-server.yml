@@ -1,0 +1,15 @@
+# Playbook to spawn the sb mq server
+ - name: Create ActiveMQ server
+   hosts: mq-sb 
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Install ActiveMQ 
+   hosts: mq-sb
+   become: yes
+   roles:
+     - activemq
+     - corosync
+     - corosync-activemq
+     - zabbix-agent-start

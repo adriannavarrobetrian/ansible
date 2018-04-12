@@ -1,0 +1,7 @@
+# Playbook to launch Couchbase Instance
+---
+ - name: Launch Instance
+   hosts: nosecure-euw1a-couchbase-1.powa.aws 
+   connection: local
+   roles:
+     - ec2-instance

@@ -1,0 +1,11 @@
+    - name: install NFS packages
+      yum: name=rpcbind,nfs-utils,nfs-utils-lib state=latest
+      become: True
+
+    - name: Ensure rpcbind is running.
+      service: name=rpcbind state=started enabled=yes
+      become: True
+
+    - name: Ensure nfs is running.
+      service: name=nfs state=started enabled=yes
+      become: True

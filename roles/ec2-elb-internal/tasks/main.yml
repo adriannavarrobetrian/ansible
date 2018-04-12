@@ -1,0 +1,42 @@
+# Role to create internal ELBs
+#
+# Relies on 
+# - the listener(s) being defined in vars
+#
+---
+ - name: Get EC2 Facts
+   action: ec2_facts
+
+ - name: Create ELB
+   ec2_elb_lb:
+     name: "{{ ELB_NAME }}"
+     scheme: internal
+     state: present
+     listeners: "{{ LISTENERS }}"
+     health_check: "{{ HEALTH_CHECK }}"
+     ec2_region: eu-west-1
+     subnets: "{{ VPC_SUBNET }}"
+   delegate_to: localhost
+   register: elb
+
+ - name: Update/Create friendly DNS
+   route53:
+     command: create
+     zone: "{{ ENV }}.{{ ZONE }}"
+     record: "{{ PROJECT }}-lb.{{ ENV }}.{{ ZONE }}"
+     type: CNAME
+     ttl: 60
+     value: "{{ item.elb.dns_name }}"
+     overwrite: yes
+     private_zone: yes
+   delegate_to: localhost
+   with_items: 
+    - "{{ elb }}"
+
+ - name: Add instances to ELB
+   ec2_elb:
+     ec2_elbs="{{ ELB_NAME }}"
+     instance_id="{{ ansible_ec2_instance_id }}"
+     state=present
+     ec2_region=eu-west-1
+   delegate_to: localhost

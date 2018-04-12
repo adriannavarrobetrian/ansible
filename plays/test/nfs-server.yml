@@ -1,0 +1,20 @@
+# Playbook to spawn an NFS server
+ - name: Create NFS server
+   hosts: nfs-test
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Setup LVM
+   hosts: nfs-test 
+   become: yes
+   roles:
+     - lvm
+
+ - name: Install NFS 
+   hosts: nfs-test 
+   become: yes
+   roles:
+     - nfs-server
+     - nfs-server-config
+     - zabbix-agent-start

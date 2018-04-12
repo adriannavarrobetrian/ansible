@@ -1,0 +1,74 @@
+#
+# workers.properties 
+#
+
+# In Unix, we use forward slashes:
+ps=/
+
+# List the workers by name
+worker.list=tomcat-lb-cms,tomcat-lb-engine,jk-status
+
+# ------------------
+#   tomcat-1-cms
+# ------------------
+
+worker.tomcat-1-cms.port=8009
+worker.tomcat-1-cms.host={{ tomcat_1_host }}
+worker.tomcat-1-cms.type=ajp13
+
+worker.tomcat-1-cms.lbfactor=1
+
+worker.tomcat-1-cms.connect_timeout=5000
+worker.tomcat-1-cms.prepost_timeout=5000
+
+worker.tomcat-1-cms.connection_pool_timeout=600
+worker.tomcat-1-cms.socket_keepalive=True
+
+# ----------------------
+#   tomcat-1-engine
+# ----------------------
+
+worker.tomcat-1-engine.port=8011
+worker.tomcat-1-engine.host={{ tomcat_1_host }}
+worker.tomcat-1-engine.type=ajp13
+
+worker.tomcat-1-engine.lbfactor=1
+
+worker.tomcat-1-engine.connect_timeout=5000
+worker.tomcat-1-engine.prepost_timeout=5000
+
+worker.tomcat-1-engine.connection_pool_timeout=600
+worker.tomcat-1-engine.socket_keepalive=True
+
+
+# -----------------------------------
+#   tomcat-ld-cms (Load Balancer)
+# -----------------------------------
+
+worker.tomcat-lb-cms.type=lb
+#worker.tomcat-lb-cms.balance_workers=tomcat-1-cms,tomcat-2-cms
+worker.tomcat-lb-cms.balance_workers=tomcat-1-cms
+#worker.tomcat-lb-cms.balance_workers=tomcat-2-cms
+worker.tomcat-lb-cms.sticky_session=1
+
+
+# --------------------------------------
+#   tomcat-ld-engine (Load Balancer)
+# --------------------------------------
+
+worker.tomcat-lb-engine.type=lb
+#worker.tomcat-lb-engine.balance_workers=tomcat-1-engine,tomcat-2-engine
+worker.tomcat-lb-engine.balance_workers=tomcat-1-engine
+#worker.tomcat-lb-engine.balance_workers=tomcat-2-engine
+worker.tomcat-lb-engine.sticky_session=1
+
+# =================
+#   status worker
+# =================
+
+worker.jk-status.type=status
+worker.jk-status.read_only=True
+
+#
+# END workers.properties
+#

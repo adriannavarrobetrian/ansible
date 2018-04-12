@@ -1,0 +1,10 @@
+#cloud-config
+hostname: "{{ inventory_hostname }}"
+fqdn: "{{ inventory_hostname }}"
+manage_etc_hosts: true
+growpart:
+  mode: auto
+  devices: ['/']
+  ignore_growroot_disabled: false
+runcmd:
+  - service rsyslog restart

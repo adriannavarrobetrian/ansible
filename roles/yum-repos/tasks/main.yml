@@ -1,0 +1,13 @@
+# Role to upload the appropriate yum.repos.d files to use the internal powa repo
+---
+ - name: Upload files
+   copy:
+     src={{ item }}
+     dest=/etc/yum.repos.d/
+   with_items:
+     - CentOS-Base.repo
+     - CentOS-Powa.repo
+     - CentOS-Upstream.repo
+     - epel.repo
+   when: ansible_distribution == "CentOS" and ansible_distribution_major_version == "6"
+

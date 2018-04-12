@@ -1,0 +1,92 @@
+# Role to install serverrmiconsole for HAProxy Load Balancers
+# Relies on having HAProxy installed (see role)
+
+---
+ - name: Create rmiuser group
+   group:
+     name=rmiuser
+     gid=31
+
+ - name: Create rmiuser
+   user:
+     name=rmiuser
+     group=rmiuser
+     uid=31
+
+ - name: Set perms of dirs
+   file:
+     path={{ item }}
+     mode=770
+     owner=root
+     group=rmiuser
+     state=directory
+   with_items:
+    - "/etc/stunnel"
+    - "/etc/stunnel/conf.d"
+    - "/etc/stunnel/cert.d"
+
+ - name: Upload software zip
+   unarchive: 
+     src=serverrmiconsole-haproxy.tar.gz
+     dest=/usr/local
+
+ - name: Set ownership of dirs to rmiuser
+   file:
+     path=/usr/local/serverrmiconsole
+     owner=rmiuser
+     group=root
+     recurse=yes
+
+ - name: Adjust startconsole.sh
+   template:
+     src=startconsole.sh.j2
+     dest=/usr/local/serverrmiconsole/bin/startconsole.sh
+     owner=rmiuser
+     group=root
+
+ - name: Upload custom rmiConf.properties.j2
+   template:
+     src=rmiConf.properties.j2
+     dest=/usr/local/serverrmiconsole/conf/rmiConf.properties
+     owner=rmiuser
+     group=root
+
+ - name: Create directories
+   file:
+     path={{ item }}
+     owner=rmiuser
+     group=root
+     state=directory
+     recurse=yes
+   with_items:
+    - "/backup/stunnel/conf.d"
+    - "/backup/stunnel/cert.d"
+    - "/var/log/serverupdater/"
+
+# This should really be changed in the rpm
+ - name: Change rmiuser shell to bash
+   user:
+     name=rmiuser
+     shell=/bin/bash
+
+ - name: Allow rmiuser to reload stunnel
+   lineinfile:
+     dest=/etc/sudoers
+     line="rmiuser  ALL=NOPASSWD{{ ":" }}  /etc/init.d/stunnel reload"
+
+ - name: Upload start script
+   copy:
+     src=serverrmiconsole
+     dest=/etc/init.d/serverrmiconsole   
+     mode=u+x
+ 
+ - name: Set service to start on boot
+   service:
+     name=serverrmiconsole
+     enabled=yes
+
+ - name: Start and enable serverrmiconsole
+   service:
+     name=serverrmiconsole
+     state=started
+     enabled=yes

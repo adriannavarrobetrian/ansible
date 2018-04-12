@@ -1,0 +1,24 @@
+# Role to install and configure postfix
+---
+ - name: Install Postfix
+   yum:
+     name=postfix
+     state=present
+  
+ - name: Enable and start Postfix
+   service:
+     name=postfix
+     enabled=yes
+     state=started
+
+ - name: Configure Postfix main.cf
+   lineinfile:
+     dest=//etc/postfix/main.cf
+     line="recipient_canonical_maps = regexp:/etc/postfix/recipient_canonical_maps"
+
+ - name: Configure Postfix Email Recipient
+   template: 
+     src=recipient_canonical_maps.j2
+     dest=/etc/postfix/recipient_canonical_maps
+   notify: 
+     - Restart Postfix   

@@ -1,0 +1,61 @@
+# Role to install Openvas
+#
+#
+ - name: Retrieve Openvas repo config
+   get_url:
+     url=http://www.atomicorp.com/installers/atomic
+     dest=/tmp/
+   register: repo_dl
+
+ - name: Copy Atomic repo rpm
+   copy:
+     src=atomic-release-1.0-21.el6.art.noarch.rpm
+     dest=/tmp
+   register: atomic_rpm
+
+ - name: Install Atomic repo
+   yum:
+     name={{ atomic_rpm.dest }}
+     state=present
+
+ - name: Remove Atomic repo rpm
+   file:
+     path={{ atomic_rpm.dest }}
+     state=absent
+
+ - name: Install Required Packages
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+    - redis
+    - atomic-sqlite-sqlite-devel
+
+ - name: Enable redis unixsocket
+   lineinfile:
+     dest=/etc/redis.conf
+     insertafter="# unixsocketperm 700"
+     line="unixsocket /tmp/redis.sock"
+
+ - name: Start redis
+   service:
+     name=redis
+     state=started
+     enabled=yes
+
+ - name: Install Openvas
+   yum:
+     name=openvas
+     state=present
+
+ - name: Edit init.d file for manager
+   lineinfile:
+     dest=/etc/init.d/openvas-manager
+     regexp="^        \$prog$"
+     line="$prog --listen 127.0.0.1"
+
+ #- name: Configure Openvas
+ #  shell: /usr/bin/openvas-setup
+ #  register: openvas_setup
+
+ #- debug: var=openvas_setup.stdout

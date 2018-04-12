@@ -1,0 +1,9 @@
+# Role to create powa user for apps to run under
+#
+#
+---
+ - name: Create powa user
+   user:
+     name=powa
+     state=present
+     home=/opt/powa

@@ -1,0 +1,17 @@
+# this file will place under /opt/apps/RatticWeb-{{ ratticweb_version }}/conf location
+
+[ratticweb]
+debug = False
+secretkey = {{ ratticweb_secrectkey }}
+hostname = {{ RATTIC_HOST }}
+
+[filepaths]
+static = /opt/apps/RatticWeb/static
+
+[database]
+engine = django.db.backends.mysql
+name = rattic
+user = rattic
+password = {{ ratticweb_secrectkey }}
+host = {{ ansible_nodename }}
+port = {{ mysql_port }} 

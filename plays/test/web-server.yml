@@ -1,0 +1,20 @@
+# Playbook to spawn an apache server
+ - name: Create Apache server
+   hosts: web-test 
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Install Apache 
+   hosts: web-test 
+   become: yes
+   roles:
+     - common
+     - java
+     - nfs-client
+     - apache
+     - apache-config-powa
+     - apache-mod_sec
+     - glp-repo
+     - serverrmiconsole-httpd
+     - zabbix-agent-start

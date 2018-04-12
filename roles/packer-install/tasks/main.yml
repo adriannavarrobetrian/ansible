@@ -1,0 +1,18 @@
+# Role to install packer
+# Anton Pritchard-Meaker
+---
+ - name: Create packer dir
+   file:
+     path=/usr/local/packer
+     state=directory
+
+ - name: Fetch Packer binaries
+   unarchive:
+     src=https://releases.hashicorp.com/packer/0.10.0/packer_0.10.0_linux_amd64.zip
+     dest=/usr/local/packer/
+     copy=no
+
+ - name: Add alias
+   lineinfile:
+     dest=/home/apritchardmeaker/.bashrc
+     line="alias packer2='/usr/local/packer/packer'"

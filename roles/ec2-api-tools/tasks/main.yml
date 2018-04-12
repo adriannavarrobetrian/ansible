@@ -1,0 +1,41 @@
+# Role to install the EC2 API tools
+#
+# Filed downloaded from https://aws.amazon.com/developertools/351
+---
+ - name: Stat existence of bin dir
+   stat:
+     path=/usr/local/aws/bin
+   register: aws_bin
+
+ - name: Create aws tools dir
+   file:
+     path=/usr/local/aws
+     state=directory
+   register: aws_path
+
+ - name: Download tools zip
+   s3:
+     mode=get
+     bucket=greenlightpower
+     object=installers/ec2-api-tools.zip
+     dest=/tmp/ec2-api-tools.zip
+
+ - name: Upack tools zip
+   unarchive:
+     src=/tmp/ec2-api-tools.zip
+     dest=/usr/local/aws
+     copy=no
+   register: tools_unarchive
+   when: not aws_bin.stat.exists
+
+ - name: Copy files back to /usr/local/aws
+   command: mv /usr/local/aws/ec2-api-tools-1.7.5.1/{{ item }} /usr/local/aws/
+   with_items:
+    - bin
+    - lib
+   when: not aws_bin.stat.exists
+
+ - name: Remove expanded dir
+   file:
+     path=/usr/local/aws/ec2-api-tools-1.7.5.1/
+     state=absent

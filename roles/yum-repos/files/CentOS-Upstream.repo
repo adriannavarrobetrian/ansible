@@ -1,0 +1,5 @@
+[upstream]
+name=CentOS-$releasever - Upstream
+baseurl=http://repo.powa.pci/centos/$releasever/upstream/$basearch/
+enabled=1
+gpgcheck=0

@@ -1,0 +1,157 @@
+# Role to create an AWS VPC
+#
+# Variables currently loaded in manually
+#
+---
+ - name: Create DHCP Options for VPC
+   ec2_vpc_dhcp_options:
+     region: "{{ REGION }}"
+     dns_servers:
+      - "172.{{ BLOCK }}.0.2"
+     tags: { "Name": "{{ ENV }}-dhcp-opts" }
+   register: dhcp
+
+ - name: Create VPC 
+   ec2_vpc_net:
+     name: "{{ ENV }}-powerweb-{{ REGION }}"
+     state: present
+     cidr_block: "{{ CIDR }}"
+     tags: { "Env": "{{ ENV }}" }
+     dns_hostnames: yes
+     region: "{{ REGION }}"
+     dhcp_opts_id: "{{ dhcp.dhcp_options_id }}"
+   register: vpc
+
+ - name: Get Main Route Table Facts
+   ec2_vpc_route_table_facts:
+     region: "{{ REGION }}"
+     filters:
+       vpc-id: "{{ vpc.vpc.id }}"
+       association.main: "true"
+   register: main_rt_facts
+
+ - name: Tag Main Route Table
+   ec2_tag:
+     region: "{{ REGION }}"
+     resource: "{{ main_rt_facts.route_tables.0.id }}"
+     state: present
+     tags: { "Name": "{{ ENV }}-powerweb-main-rt" }
+
+ - name: Create Internet Gateway
+   ec2_vpc_igw:
+     region: "{{ REGION }}"
+     vpc_id: "{{ vpc.vpc.id }}"
+     state: present
+   register: igw
+
+ - name: Tag Internet Gateway
+   ec2_tag:
+     region: "{{ REGION }}"
+     resource: "{{ igw.gateway_id }}" 
+     state: present
+     tags: { "Name": "{{ ENV }}-powerweb-igw" }
+
+ - name: Create subnets
+   ec2_vpc_subnet:
+     state: present
+     region: "{{ REGION }}"
+     vpc_id: "{{ vpc.vpc.id }}" 
+     cidr: "{{ item.value.cidr }}"
+     tags: "{{ item.value.tags }}"
+     az: "{{ item.value.az }}"
+   with_dict:
+     "{{ SUBNETS }}"
+
+# - name: Get NAT Subnet facts
+#   ec2_vpc_subnet_facts:
+#     region: "{{ REGION }}"
+#     filters:
+#       "tag:Name": "{{ ENV }}-NAT-euw1a"
+#   register: nat_subnets_facts
+
+# - name: Create NAT Gateway
+#   ec2_vpc_nat_gateway:
+#     state: present
+#     subnet_id: "{{ nat_subnets_facts.subnets.0.id }}"
+#     region: "{{ REGION }}"
+#     if_exist_do_not_create: True
+#   register: nat_gateway
+
+ - name: Create VPC peer to Admin network
+   ec2_vpc_peer:
+     region: "{{ REGION }}"
+     vpc_id: "{{ vpc.vpc.id }}"
+     peer_vpc_id: "{{ ADMIN_VPC_ID }}"
+     state: present
+     tags: { "Name": "{{ ENV }}-powerweb-to-Admin" }
+   register: vpc_peer
+
+ - name: Accept local VPC peering request
+   ec2_vpc_peer:
+     region: "{{ REGION }}"
+     peering_id: "{{ vpc_peer.peering_id }}"
+     state: accept
+     tags: { "Name": "{{ ENV }}-powerweb-to-Admin" }
+   register: accept_peer
+
+ - name: Get Public Subnet Facts
+   ec2_vpc_subnet_facts:
+     region: "{{ REGION }}"
+     filters:
+       "tag:Facing": "Public"
+   register: public_subnets_facts
+
+ - name: Get Private Subnet Facts
+   ec2_vpc_subnet_facts:
+     region: "{{ REGION }}"
+     filters:
+       "tag:Facing": "Private"
+   register: private_subnets_facts
+
+ - name: Create Private Subnet List
+   set_fact: 
+     private_subnets="{{ private_subnets_facts.subnets|map(attribute='id')|list|unique }}"
+
+ - name: Create Public Subnet List
+   set_fact:
+     public_subnets="{{ public_subnets_facts.subnets|map(attribute='id')|list|unique }}"
+
+ - name: Create Private Route Table
+   ec2_vpc_route_table:
+     vpc_id: "{{ vpc.vpc.id }}"
+     tags: { "Env": "{{ ENV }}", "Facing": "Public", "Name": "{{ ENV }}-priv-rtb-{{ REGION }}" }
+     region: "{{ REGION }}"
+     subnets: "{{ private_subnets }}"
+     routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ igw.gateway_id }}"
+      - dest: 172.18.0.0/16
+        vpc_peering_connection_id: "{{ vpc_peer.peering_id }}"
+   register: private_route_table
+
+ - name: Create Public Route Table
+   ec2_vpc_route_table:
+     vpc_id: "{{ vpc.vpc.id }}"
+     tags: { "Env": "{{ ENV }}", "Facing": "Public", "Name": "{{ ENV }}-pub-rtb-{{ REGION }}" }
+     region: "{{ REGION }}"
+     subnets: "{{ public_subnets }}"
+     routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ igw.gateway_id }}"
+      - dest: 172.18.0.0/16
+        vpc_peering_connection_id: "{{ vpc_peer.peering_id }}"
+   register: public_route_table
+
+ - name: Associate VPC to DNS zones in route53
+   command: aws route53 associate-vpc-with-hosted-zone --hosted-zone-id "{{ item }}" --vpc "VPCRegion={{ REGION }},VPCId={{ vpc.vpc.id }}"
+   with_items:
+    - "{{ DNS_ZONES }}"
+   when: vpc.changed
+
+ - name: Create Endpoint into AWS for services connection (s3 downloads) - Private rtb
+   command: aws ec2 create-vpc-endpoint --vpc-id {{ vpc.vpc.id }} --service-name com.amazonaws.{{ REGION }}.s3 --route-table-ids {{ private_route_table.route_table.id }}
+   when: vpc.changed
+
+ - name: Create Endpoint into AWS for services connection (s3 downloads) - Public rtb
+   command: aws ec2 create-vpc-endpoint --vpc-id {{ vpc.vpc.id }} --service-name com.amazonaws.{{ REGION }}.s3 --route-table-ids {{ public_route_table.route_table.id }}
+   when: vpc.changed

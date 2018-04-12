@@ -1,0 +1,26 @@
+# Playbook to create promotions app servers
+---
+ - name: Create instances
+   hosts: promo-db-test
+   connection: local
+   roles:
+    - ec2-instance
+
+ - name: Set up promo DB
+   hosts: promo-db-test
+   become: yes
+   roles:
+    - common
+    - zabbix-agent
+    - glp-repo
+    - couchbase
+
+ - name: Create Promotions DB Bucket
+   hosts: promo-db-test
+   become: yes
+   tasks:
+    - name: Create Env Specific Bucket
+      shell: curl -u admin:{{ PROMO_DB_PASS }} -d name=promotions-{{ ENV }} -d ramQuotaMB=100 -d replicaNumber=0 -d authType=none -d proxyPort=8080 http://localhost:8091/pools/default/buckets
+
+    - name: Create Generic Promotions Bucket
+      shell: curl -u admin:{{ PROMO_DB_PASS }} -d name=promotions -d ramQuotaMB=100 -d replicaNumber=0 -d authType=none -d proxyPort=8081 http://localhost:8091/pools/default/buckets

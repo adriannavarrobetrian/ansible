@@ -1,0 +1,40 @@
+local {{ ansible_default_ipv4.address }}
+port 1194
+proto udp
+dev tun
+ca /etc/openvpn/easy-rsa/keys/ca.crt
+cert /etc/openvpn/easy-rsa/keys/glp-euw1a-openvpn.crt
+key /etc/openvpn/easy-rsa/keys/glp-euw1a-openvpn.key
+dh /etc/openvpn/easy-rsa/keys/dh2048.pem
+tls-auth /etc/openvpn/easy-rsa/keys/ta.key 0 
+topology subnet
+server 172.18.255.0 255.255.255.0
+ifconfig-pool-persist cli-ip-map.log
+push "route 172.20.0.0 255.255.0.0"
+push "route 172.18.0.0 255.255.0.0"
+push "route 172.19.0.0 255.255.0.0"
+push "route 172.16.0.0 255.255.0.0"
+push "route 172.17.0.0 255.255.0.0"
+keepalive 10 60
+
+plugin /usr/lib64/openvpn/plugins/openvpn-plugin-auth-pam.so openvpn
+username-as-common-name
+
+comp-lzo
+cipher AES-256-CBC
+user nobody
+group nobody
+
+persist-key
+persist-tun
+
+status logs/cli-status.log
+
+log logs/openvpn-temp.log
+log-append logs/openvpn.log
+
+verb 4
+
+mute 20
+
+crl-verify crl.pem

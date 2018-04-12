@@ -1,0 +1,34 @@
+# Please read the corosync.conf.5 manual page
+compatibility: whitetank
+totem {
+        version: 2
+        secauth: on
+        threads: 0
+        interface {
+                ringnumber: 0
+    {% for host in ansible_play_hosts %}
+                member {
+                        memberaddr: {{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}
+                }
+    {% endfor %}
+                bindnetaddr: {{ ansible_default_ipv4.network }}
+                mcastport: 5405
+        }
+        transport: udpu
+}
+logging {
+        fileline: off
+        to_stderr: no
+        to_logfile: yes
+        to_syslog: yes
+        logfile: /var/log/cluster/corosync.log
+        debug: off
+        timestamp: on
+        logger_subsys {
+                subsys: AMF
+                debug: off
+        }
+}
+amf {
+        mode: disabled
+}

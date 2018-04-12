@@ -1,0 +1,51 @@
+# This role is part of the Auto Start process 
+# It is designed to work with the current start mechanism for Powa Web:
+#  - Starts CMS and Engine on first app server
+#  - Starts CMS only on the other servers in the group
+---
+ - name: Delete catalina.out files
+   file: 
+     path=/usr/local/tomcat/actual/instances/{{ item }}/logs/catalina.out
+     state=absent
+   with_items:
+    - cms
+    - engine
+
+ - name: Re-create catalina.out files
+   file:
+     path=/usr/local/tomcat/actual/instances/{{ item }}/logs/catalina.out
+     state=touch
+     owner=tomcat
+     group=tomcat
+   with_items:
+    - cms
+    - engine
+ 
+ - name: Start CMS and Engine on Main Server
+   command: /root/bin/starttomcat
+   when: inventory_hostname == "app-01.{{ ENV }}.{{ ZONE }}"
+
+ - name: Wait for CMS and Engine to Start
+   wait_for:
+     path=/usr/local/tomcat/actual/instances/{{ item }}/logs/catalina.out
+     search_regex="INFO\:\ Server startup in [0-9]* ms$"
+     timeout=600
+   with_items:
+    - cms
+    - engine
+   when: inventory_hostname == "app-01.{{ ENV }}.{{ ZONE }}"
+
+ - name: Start CMS Only on other servers
+   service:
+     name=tomcat_cms
+     state=started
+   when: inventory_hostname != "app-01.{{ ENV }}.{{ ZONE }}"
+
+ - name: Wait for CMS
+   wait_for:
+     path=/usr/local/tomcat/actual/instances/{{ item }}/logs/catalina.out
+     search_regex="INFO\:\ Server startup in [0-9]* ms$"
+     timeout=600
+   with_items:
+    - cms
+   when: inventory_hostname != "app-01.{{ ENV }}.{{ ZONE }}"

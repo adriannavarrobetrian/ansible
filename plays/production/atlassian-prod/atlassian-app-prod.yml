@@ -1,0 +1,79 @@
+# Playbook to launch server to Launch PROD Atlassian app server base
+#
+# USAGE: ansible-playbook atlassian-app-prod.yml -u $YOUR_USERNAME --limit jira-prod/confluence-prod/atlassian-db-prod 
+#
+# VARS: group_vars
+#
+#test comment
+
+ - name: Launch Instance
+   hosts: atlassian-app-prod
+   connection: local
+   roles:
+     - { role: ec2-instance, tags: ec2-instance }
+
+ - name: Configure Storage
+   hosts: atlassian-app-prod
+   become: yes
+   vars:
+    - ssh_users:
+       - vkovalovs
+   roles:
+     - ssh-users
+     - disable-iptables
+     - { role: common, tags: common }
+     - { role: postfix-ses, tags: postfix-ses }
+     - zabbix-agent-start
+   tasks:
+     - name: Create filesystem on app data store
+       filesystem:
+         dev=/dev/xvdb
+         fstype=ext4
+       register: fs
+
+     - name: Mount app data storage
+       mount: 
+         fstype=ext4
+         src=/dev/xvdb
+         state=mounted
+         name=/store/data/
+
+     - name: Create swap
+       command: mkswap /dev/xvdc
+
+     - name: Turn on swap
+       command: swapon /dev/xvdc
+
+     - name: Mount swap
+       mount:
+         fstype=swap
+         opts=sw
+         src=/dev/xvdc
+         name=none
+         state=mounted
+       ignore_errors: yes
+
+     - name: Mount swap manually
+       command: mount -a
+   
+     - name: Install required packages
+       yum:
+         name={{ item }}
+         state=present 
+       with_items:
+        - nano 
+        - vim 
+        - htop 
+        - iftop 
+        - iotop 
+        - nmap 
+        - tcptraceroute 
+        - screen 
+        - tcpdump 
+        - policycoreutils-python 
+        - yum-plugin-security 
+        - mlocate 
+        - crontabs 
+        - wget 
+        - tree 
+        - socat

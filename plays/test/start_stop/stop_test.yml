@@ -1,0 +1,9 @@
+---
+ - name: Stop Test Servers
+   hosts: "{{ targets }}"
+   vars:
+     group: "{{ group }}"
+     ports:
+      - 22
+   roles:
+    - server-stop

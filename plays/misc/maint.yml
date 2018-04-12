@@ -1,0 +1,11 @@
+# Test Play to Set Maintenance Windows
+---
+ - name: Set Maintenance Window
+   hosts: localhost
+   connection: local
+   vars:
+     MAINT_NAME: "Test Maintenance Window"
+     MAINT_GROUPS: "Test"
+     MAINT_MINS: 60
+   roles:
+    - zabbix-maintenance

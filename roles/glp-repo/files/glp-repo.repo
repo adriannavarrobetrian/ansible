@@ -1,0 +1,5 @@
+[glp-rpm-releases]
+name=GLP rpm-releases YUM repo
+baseurl=http://nexus.glp.com/nexus/content/repositories/rpm-releases
+enabled=1
+gpgcheck=0

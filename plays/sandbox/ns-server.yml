@@ -1,0 +1,17 @@
+# Playbook to launch Name Servers for sb environment
+#
+---
+ - name: Launch instance
+   hosts: ns-sb 
+   connection: local
+   roles:
+    - ec2-instance
+
+ - name: Install bind
+   hosts: ns-sb
+   become: yes
+   roles:
+    - named-auth-server
+    - named-auth-server-static-zones
+    - serverrmiconsole-ns
+    - zabbix-agent-start

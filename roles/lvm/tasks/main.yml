@@ -1,0 +1,21 @@
+    #- include_vars: ../../group_vars/test-nfs/aws.yml
+    - name: create LVM volume group
+      lvg: vg=store_vg pvs={{ LVM_PV_DEVICE_LIST }} pesize=4
+      become: True
+
+    - name: create LVM
+      lvol: vg=store_vg lv=store size=100%PVS
+      become: True
+
+    - name: create filesystem
+      filesystem: fstype=ext4 dev=/dev/store_vg/store
+      become: True
+
+    - name: create /store directory
+      file: path=/store state=directory 
+      become: True
+
+    - name: mount LVM and add to fstab
+      mount: name=/store src=/dev/store_vg/store fstype=ext4 state=mounted
+      become: True
+

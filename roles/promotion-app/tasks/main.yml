@@ -1,0 +1,32 @@
+# Role to launch Promotions App Servers
+#
+# Dependencies:
+#  java-8
+#  glp-repo
+#  powa-user
+---
+ - name: Install powabase
+   yum: 
+     name={{ item }}
+     state=present
+   with_items:
+    - powabase
+
+ - name: Upload pt3-variables.ini (needed to populate variables in promo app config)
+   template:
+     src=pt3-variables.ini.j2
+     dest=/etc/powa/pt3-variables.ini
+
+ - name: Install powabase
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+    - promotion
+    - daemonize
+
+ - name: Start and Enable Promotions
+   service:
+     name=promotion-service
+     state=started
+     enabled=yes

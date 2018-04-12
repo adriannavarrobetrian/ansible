@@ -1,0 +1,78 @@
+# Preparing Web Server for RatticWeb 1.3
+
+<VirtualHost *:80>
+   ServerName {{ RATTIC_HOST }}
+   ServerAlias ratticdb
+
+   Redirect permanent / https://{{ RATTIC_HOST }}/
+
+   Alias /robots.txt /opt/apps/RatticWeb/static/robots.txt
+   Alias /favicon.ico /opt/apps/RatticWeb/static/favicon.ico
+   AliasMatch ^/([^/]*\.css) /opt/apps/RatticWeb/static/styles/$1
+   Alias /media/ /opt/apps/RatticWeb/media/
+   Alias /static/ /opt/apps/RatticWeb/static/
+   <Directory /opt/apps/RatticWeb/static>
+   Order deny,allow
+   Allow from all
+   </Directory>
+   <Directory /opt/apps/RatticWeb/media>
+   Order deny,allow
+   Allow from all
+   </Directory>
+   WSGIScriptAlias / /opt/apps/RatticWeb/ratticweb/wsgi.py
+   WSGIPassAuthorization On
+   WSGIDaemonProcess rattic processes=2 threads=25 home=/opt/apps/RatticWeb/ python-path=/opt/apps/RatticWeb display-name=%{GROUP}
+   WSGIProcessGroup rattic
+   <Directory /opt/apps/RatticWeb/ratticweb>
+     <Files wsgi.py>
+       Order deny,allow
+       Allow from all
+     </Files>
+   </Directory>
+
+</VirtualHost>
+
+   WSGISocketPrefix ../../var/run/wsgi
+
+NameVirtualHost *:443
+
+<VirtualHost *:443>
+   ServerName {{ RATTIC_HOST }}
+   ServerAlias ratticdb
+
+   Header always set Strict-Transport-Security "max-age=63072000; includeSubdomains;"
+
+   Alias /robots.txt /opt/apps/RatticWeb/static/robots.txt
+   Alias /favicon.ico /opt/apps/RatticWeb/static/favicon.ico
+   AliasMatch ^/([^/]*\.css) /opt/apps/RatticWeb/static/styles/$1
+   Alias /media/ /opt/apps/RatticWeb/media/
+   Alias /static/ /opt/apps/RatticWeb/static/
+   <Directory /opt/apps/RatticWeb/static>
+   Order deny,allow
+   Allow from all
+   </Directory>
+   <Directory /opt/apps/RatticWeb/media>
+   Order deny,allow
+   Allow from all
+   </Directory>
+   WSGIScriptAlias / /opt/apps/RatticWeb/ratticweb/wsgi.py
+   WSGIPassAuthorization On
+   WSGIProcessGroup rattic
+   <Directory /opt/apps/RatticWeb/ratticweb>
+     <Files wsgi.py>
+       Order deny,allow
+       Allow from all
+     </Files>
+   </Directory>
+
+   SSLEngine on
+
+   SSLCipherSuite EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH
+   SSLProtocol All -SSLv2 -SSLv3 -TLSv1 -TLSv1.1
+   SSLHonorCipherOrder On
+
+   SSLCertificateKeyFile /etc/httpd/conf.d/ssl/key/greenlightpower.key
+   SSLCertificateFile /etc/httpd/conf.d/ssl/cert/greenlightpower.cert
+   SSLCertificateChainFile /etc/httpd/conf.d/ssl/ca/greenlightpower.ca
+
+</VirtualHost>

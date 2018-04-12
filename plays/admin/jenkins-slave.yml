@@ -1,0 +1,13 @@
+# Playbook to create a Jenkins server to be used for various admin tasks
+- name: Create Jenkins slave instances
+  hosts: jenkins-slave
+  connection: local
+  roles:
+   - ec2-instance
+
+- name: Configure Jenkins slave 
+  hosts: jenkins-slave
+  become: yes
+  roles:
+   - jenkins-slave # <- add in user conf
+   - zabbix-agent-start

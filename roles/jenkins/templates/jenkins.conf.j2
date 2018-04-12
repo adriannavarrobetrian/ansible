@@ -1,0 +1,14 @@
+<VirtualHost *:80>
+	ServerAdmin webmaster@gplshops.com
+	ServerName {{ ansible_nodename }}
+	ServerAlias {{ ansible_hostname }}
+	ProxyRequests Off
+	<Proxy *>
+		Order deny,allow
+		Allow from all
+	</Proxy>
+	ProxyPreserveHost on
+	ProxyPass / http://localhost:8080/ nocanon
+	AllowEncodedSlashes NoDecode
+</VirtualHost>
+

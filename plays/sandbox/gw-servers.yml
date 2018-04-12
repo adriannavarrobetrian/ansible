@@ -1,0 +1,23 @@
+# Play to Create Squid Internet Gateways
+---
+ - name: Create instances
+   hosts: gw-sb
+   connection: local
+   roles:
+    - ec2-instance
+
+ - name: Get EC2 Facts
+   hosts: gw-sb
+   gather_facts: false
+   tasks:
+    - name: Get EC2 Facts for hosts
+      action: ec2_facts
+
+ - name: Set up Squid Proxies
+   hosts: gw-sb
+   become: yes
+   roles:
+    - ec2-api-tools 
+    - corosync
+    - corosync-gw
+    - squid-gw

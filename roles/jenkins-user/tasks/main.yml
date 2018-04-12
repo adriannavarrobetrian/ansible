@@ -1,0 +1,103 @@
+# Role to create Jenkins ssh users
+#
+# To be used in conjunction with start/stop roles to allow users to ssh from Jenkins to other servers in the estate
+# using their private ssh keys
+#
+# Relies on Ansible being present
+---
+ - name: Create users
+   user:
+     name={{ item.key }}
+     state=present
+     groups=wheel
+   with_dict:
+     "{{ JENKINS_SSH_USER }}"
+
+ - name: Create user .ssh dir
+   file:
+     path=/home/{{ item.key }}/.ssh
+     mode=700
+     state=directory
+     owner={{ item.key }}
+     group={{ item.key }}
+   with_dict:
+     "{{ JENKINS_SSH_USER }}"
+
+ - name: Upload user private ssh key
+   copy:
+     content={{ item.value.ssh_key_priv }}
+     dest=/home/{{ item.key }}/.ssh/id_rsa
+     owner={{ item.key }}
+     group={{ item.key }}
+     mode=600
+   with_dict:
+     "{{ JENKINS_SSH_USER }}"
+
+ - name: Upload user public ssh key
+   copy:
+     content={{ item.value.ssh_key_pub }}
+     dest=/home/{{ item.key }}/.ssh/id_rsa.pub
+     owner={{ item.key }}
+     group={{ item.key }}
+     mode=700
+   with_dict:
+     "{{ JENKINS_SSH_USER }}"
+
+ - name: Set vault passwd file in bashrc
+   lineinfile:
+     dest=/home/{{ item.key }}/.bashrc
+     line="export ANSIBLE_VAULT_PASSWORD_FILE=/etc/ansible/pass/.vault_pass"
+     insertafter="# User specific aliases and functions"
+   with_dict:
+     "{{ JENKINS_SSH_USER }}"
+
+ - name: Export bash vars for AWS authentication
+   lineinfile:
+     dest=/home/jenkins-user/.bashrc
+     line="export {{ item }}"
+     insertafter="# User specific aliases and functions"
+   with_items:
+    - "{{ AWS_CREDS }}"
+
+ - name: root known_hosts entry to get around ssh clone bug
+   lineinfile:
+     dest=/root/.ssh/known_hosts
+     line="[stash.ht.powa.com]:7999,[172.16.75.123]:7999 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCIJabkBA92+TcWYMD7kdk/FPAx6d5YWS2xTBP8jj0rwBjpQkby3woB7ASBMF7RNI1TNEumgHKnQrmivrd6AwH1nakju7gQEvb4dR1yXZf4ZAg93XlzBYo44qh4XbJ3Wup442y4SF+pjSOpRg1XbnOKQ38yBpkZ04z3bG84Dtv8cAWNxThbV+z7L6h0qek7aTOwGoEHgj9OqJpITDvnoH8L7WbUeWtBssszGwg2MbUMPfhsbDJIu9bwi0ljbaXAbztiF9Bn8zX4ktsJrrZLuRTwRl+UJAnZCI8JnFgTHJxGhkZ/P7z5XQvMVVlYF96AcSYDxs9CRnPfjhUlfZwF/mDZ"
+
+ - name: Checkout Master branch
+   git:
+     repo=ssh://git@stash.ht.powa.com:7999/sys/ansible.git
+     dest=/etc/ansible
+     key_file=/home/jenkins-user/.ssh/id_rsa
+     accept_hostkey=yes
+     force=yes
+   become: yes
+   become_user: jenkins-user
+
+ - name: Change ownership of Ansible dir to jenkins-user
+   file:
+     path=/etc/ansible
+     owner=jenkins-user
+     group=jenkins-user
+     recurse=yes
+
+ - name: Reconfigure Jenkins to run as jenkins-user
+   replace:
+     regexp='^$JENKINS_USER="jenkins"$'
+     replace="$JENKINS_USER="jenkins-user""
+     dest=/etc/sysconfig/jenkins
+   notify:
+    - Restart jenkins
+
+ - name: Change ownership of dirs to jenkins-user after re-configure
+   file:
+     path={{ item }}
+     owner=jenkins-user
+     group=jenkins-user
+     recurse=yes
+   with_items:
+    - /var/lib/jenkins
+    - /var/cache/jenkins
+    - /var/log/jenkins
+   notify:
+    - Restart jenkins

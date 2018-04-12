@@ -1,0 +1,426 @@
+# VPC Creation
+#
+#
+---
+ - name: Create VPC
+   hosts: localhost
+   gather_facts: False
+   connection: local
+   vars:
+     ENV: sb
+     REGION: eu-west-1
+     BLOCK: 19
+     CIDR: "172.{{ BLOCK }}.0.0/16"
+     ADMIN_VPC_ID: vpc-a2719cc6
+     DNS_ZONES:
+      - "Z2D8FYSDVO6O1I"
+      - "Z884M254BIUN5"
+      - "Z6LJCI6SK149R"
+      - "Z3P5BZOK1BZBX5"
+     SUBNETS:
+       app-euw1a:
+         cidr: "172.{{ BLOCK }}.14.0/24"
+         az: eu-west-1a
+         tags: { "Env": "{{ ENV }}", "Facing" : "Private", "Tier" : "App", "Name": "{{ ENV }}-app-euw1a" }
+       app-euw1b:
+         cidr: "172.{{ BLOCK }}.24.0/24"
+         az: eu-west-1b
+         tags: { "Env": "{{ ENV }}", "Facing" : "Private", "Tier" : "App", "Name": "{{ ENV }}-app-euw1b" }
+       aux-euw1a:
+         cidr: "172.{{ BLOCK }}.10.0/24"
+         az: eu-west-1a
+         tags: { "Env": "{{ ENV }}", "Facing" : "Private", "Tier" : "Aux", "Name": "{{ ENV }}-aux-euw1a" }
+       aux-euw1b:
+         cidr: "172.{{ BLOCK }}.20.0/24"
+         az: eu-west-1b
+         tags: { "Env": "{{ ENV }}", "Facing" : "Private", "Tier" : "Aux", "Name": "{{ ENV }}-aux-euw1b" }
+       dmz-lb-euw1a:
+         cidr: "172.{{ BLOCK }}.11.16/28"
+         az: eu-west-1a
+         tags: { "Env": "{{ ENV }}", "Facing" : "Public", "Tier" : "DMZ-LB", "Name": "{{ ENV }}-dmz-lb-euw1a" }
+       dmz-lb-euw1b:	
+         cidr: "172.{{ BLOCK }}.21.16/28"
+         az: eu-west-1b
+         tags: { "Env": "{{ ENV }}", "Facing" : "Public", "Tier" : "DMZ-LB", "Name": "{{ ENV }}-dmz-lb-euw1b" }
+       dmz-gateway-euw1a:
+         cidr: "172.{{ BLOCK }}.1.16/28"
+         az: eu-west-1a
+         tags: { "Env": "{{ ENV }}", "Facing" : "Public", "Tier" : "DMZ-Gateway", "Name": "{{ ENV }}-dmz-gateway-euw1a" }
+       dmz-gateway-euw1b:
+         cidr: "172.{{ BLOCK }}.2.16/28"
+         az: eu-west-1b
+         tags: { "Env": "{{ ENV }}", "Facing" : "Public", "Tier" : "DMZ-Gateway", "Name": "{{ ENV }}-dmz-gateway-euw1b" }
+       dmz-services-euw1a:
+         cidr: "172.{{ BLOCK }}.1.32/27"
+         az: eu-west-1a
+         tags: { "Env": "{{ ENV }}", "Facing" : "Public", "Tier" : "DMZ-Services", "Name": "{{ ENV }}-dmz-services-euw1a" }
+       nat-subnet-euw1a:
+         cidr: "172.{{ BLOCK }}.99.0/28"
+         az: eu-west-1a
+         tags: { "Env": "{{ ENV }}", "Facing" : "Public", "Tier" : "NAT", "Name": "{{ ENV }}-NAT-euw1a" }
+     SEC_RULES:
+       base:
+         description: Base set of rules for each host
+         rules_inbound:
+# Allow inbound ssh access from Bastion Server
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: 172.18.1.4/32
+# Allow inbound ssh access from Admin Jenkins Server
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: 172.18.2.5/32
+# Allow inbound access from Zabbix monitoring (Zabbix Agent)
+          - proto: udp
+            from_port: 10050
+            to_port: 10051
+            cidr_ip: 172.18.2.4/32
+          - proto: tcp
+            from_port: 10050
+            to_port: 10051
+            cidr_ip: 172.18.2.4/32
+# Allow ICMP traffic from private Admin subnet (OpenVAS vulnerability scans)
+          - proto: icmp
+            from_port: -1
+            to_port: -1
+            cidr_ip: 172.18.2.0/24
+         rules_outbound:
+# Allow outbound access to Zabbix monitoring server (Zabbix Agent)
+          - proto: udp
+            from_port: 10050
+            to_port: 10051
+            cidr_ip: 172.18.2.4/32
+          - proto: tcp
+            from_port: 10050
+            to_port: 10051
+            cidr_ip: 172.18.2.4/32
+# Allow outbound http/https access
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 0.0.0.0/0
+# Allow outbound smtp access for email
+          - proto: tcp
+            from_port: 465
+            to_port: 465
+            cidr_ip: 0.0.0.0/0
+       http:
+         description: http/https inbound/outbound
+         rules_inbound:
+# Allow inbound http/https access
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 0.0.0.0/0
+         rules_outbound:
+# Allow inbound http/https access
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 0.0.0.0/0
+       ns:
+         description: Public Facing DNS inbound/outbound
+         rules_inbound:
+# Allow inbound DNS query requests
+          - proto: tcp
+            from_port: 53
+            to_port: 53
+            cidr_ip: 0.0.0.0/0
+          - proto: udp
+            from_port: 53
+            to_port: 53
+            cidr_ip: 0.0.0.0/0
+         rules_outbound:
+# Allow inbound DNS query responses and external lookups
+          - proto: tcp
+            from_port: 53
+            to_port: 53
+            cidr_ip: 0.0.0.0/0
+          - proto: udp
+            from_port: 53
+            to_port: 53
+            cidr_ip: 0.0.0.0/0
+       serv-updater:
+         description: Allow RMI port for Server Updater
+         rules_inbound:
+# Allow inbound requests to RMI server port from App Server subnets
+          - proto: tcp
+            from_port: 2007
+            to_port: 2007
+            cidr_ip: "172.{{ BLOCK }}.14.0/24"
+          - proto: tcp
+            from_port: 2007
+            to_port: 2007
+            cidr_ip: "172.{{ BLOCK }}.24.0/24"
+         rules_outbound:
+# Allow outbound replies to RMI server port to App Server subnets
+          - proto: tcp
+            from_port: 2007
+            to_port: 2007
+            cidr_ip: "172.{{ BLOCK }}.14.0/24"
+          - proto: tcp
+            from_port: 2007
+            to_port: 2007
+            cidr_ip: "172.{{ BLOCK }}.24.0/24"
+       mysql:
+         description: Allow MySQL ports for DB servers
+         rules_inbound:
+# Allow inbound requests to MySQL database servers from App Server subnets and via the VPN
+          - proto: tcp
+            from_port: 3306
+            to_port: 3306
+            cidr_ip: "172.{{ BLOCK }}.14.0/24"
+          - proto: tcp
+            from_port: 3306
+            to_port: 3306
+            cidr_ip: "172.{{ BLOCK }}.24.0/24"
+          - proto: tcp
+            from_port: 3306
+            to_port: 3306
+            cidr_ip: "172.18.1.4/32"
+         rules_outbound:
+# Allow outbound replies to MySQL database servers to App Server subnets
+          - proto: tcp
+            from_port: 3306
+            to_port: 3306
+            cidr_ip: "172.{{ BLOCK }}.14.0/24"
+          - proto: tcp
+            from_port: 3306
+            to_port: 3306
+            cidr_ip: "172.{{ BLOCK }}.24.0/24"
+       app:
+         description: App Server Security Group
+         rules_inbound:
+# Allow inbound tomcat port access from the App Server Subnets
+          - proto: tcp
+            from_port: 8009
+            to_port: 8009
+            cidr_ip: "172.{{ BLOCK }}.14.0/24"
+          - proto: tcp
+            from_port: 8009
+            to_port: 8009
+            cidr_ip: "172.{{ BLOCK }}.24.0/24"
+          - proto: tcp
+            from_port: 8085
+            to_port: 8085
+            cidr_ip: "172.{{ BLOCK }}.14.0/24"
+          - proto: tcp
+            from_port: 8085
+            to_port: 8085
+            cidr_ip: "172.{{ BLOCK }}.24.0/24"
+          - proto: tcp
+            from_port: 8011
+            to_port: 8011
+            cidr_ip: "172.{{ BLOCK }}.14.0/24"
+          - proto: tcp
+            from_port: 8011
+            to_port: 8011
+            cidr_ip: "172.{{ BLOCK }}.24.0/24"
+         rules_outbound:
+# Allow outbound tomcat port access to the App Server Subnets
+          - proto: tcp
+            from_port: 8009
+            to_port: 8009
+            cidr_ip: "172.{{ BLOCK }}.14.0/24"
+          - proto: tcp
+            from_port: 8009
+            to_port: 8009
+            cidr_ip: "172.{{ BLOCK }}.24.0/24"
+          - proto: tcp
+            from_port: 8085
+            to_port: 8085
+            cidr_ip: "172.{{ BLOCK }}.14.0/24"
+          - proto: tcp
+            from_port: 8085
+            to_port: 8085
+            cidr_ip: "172.{{ BLOCK }}.24.0/24"
+          - proto: tcp
+            from_port: 8011
+            to_port: 8011
+            cidr_ip: "172.{{ BLOCK }}.14.0/24"
+          - proto: tcp
+            from_port: 8011
+            to_port: 8011
+            cidr_ip: "172.{{ BLOCK }}.24.0/24"
+# Allow outbound RMI server access to all subnets
+          - proto: tcp
+            from_port: 2007
+            to_port: 2007
+            cidr_ip: "172.{{ BLOCK }}.0.0/16"
+       lb:
+         description: Load Balancer Sec Group To Restrict Access to Pre-production Envs
+         rules_inbound:
+# Allow http/https access from Greenlight Power Offices
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 188.39.12.12/32
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 188.39.12.12/32
+# Allow http/https access from outbound internet proxy 
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 52.30.40.247/32
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 52.30.40.247/32
+# Allow http/https access from Admin Jenkins server for port checks
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 172.18.2.5/32
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 172.18.2.5/32
+# Allow http/https access from Oxagile Offices in Minsk
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 46.216.180.98/32
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 46.216.180.98/32
+# Allow http/https access from Helen Tom home connection
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 92.21.60.113/32
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 92.21.60.113/32
+# Allow http/https access from Attraqt Office
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 79.173.155.200/32
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 79.173.155.200/32
+         rules_outbound:
+# Allow http/https replies to Greenlight Power Offices
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 188.39.12.12/32
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 188.39.12.12/32
+# Allow http/https replies to outbound http proxy
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 52.30.40.247/32
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 52.30.40.247/32
+# Allow http/https replies to Admin Jenkins server (port checks)
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 172.18.2.5/32
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 172.18.2.5/32
+# Allow http/https replies to Oxagile Offices in Minsk
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 46.216.180.98/32
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 46.216.180.98/32
+# Allow http/https replies to Helen Tom home connection
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 92.21.60.113/32
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 92.21.60.113/32
+# Allow http/https replies to Attraqt Office
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 79.173.155.200/32
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 79.173.155.200/32
+       dmz-corosync:
+         description: DMZ Corosync Security Group
+         rules_inbound:
+# Allow inbound access to DRBD and corosync ports from DMZ network subnets
+          - proto: tcp
+            from_port: 7788
+            to_port: 7788
+            cidr_ip: "172.{{ BLOCK }}.1.0/24"
+          - proto: udp
+            from_port: 5404
+            to_port: 5406
+            cidr_ip: "172.{{ BLOCK }}.1.0/24"
+          - proto: tcp
+            from_port: 7788
+            to_port: 7788
+            cidr_ip: "172.{{ BLOCK }}.2.0/24"
+          - proto: udp
+            from_port: 5404 
+            to_port: 5406
+            cidr_ip: "172.{{ BLOCK }}.2.0/24"
+# Allow inbound ICMP requests to allow for VIP checks
+          - proto: icmp
+            from_port: -1
+            to_port: -1
+            cidr_ip: "0.0.0.0/0"
+         rules_outbound:
+# Allow outbound replies to DRBD and corosync ports to DMZ network subnets
+          - proto: tcp
+            from_port: 7788
+            to_port: 7788
+            cidr_ip: "172.{{ BLOCK }}.1.0/24"
+          - proto: udp
+            from_port: 5404
+            to_port: 5406
+            cidr_ip: "172.{{ BLOCK }}.1.0/24"
+          - proto: tcp
+            from_port: 7788
+            to_port: 7788
+            cidr_ip: "172.{{ BLOCK }}.2.0/24"
+          - proto: udp
+            from_port: 5404
+            to_port: 5406
+            cidr_ip: "172.{{ BLOCK }}.2.0/24"
+# Allow outbound ICMP requests to allow for VIP checks
+          - proto: icmp
+            from_port: -1
+            to_port: -1
+            cidr_ip: "0.0.0.0/0"
+   roles:
+    - ec2-vpc
+    - ec2-vpc-security-groups

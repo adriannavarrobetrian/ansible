@@ -1,0 +1,151 @@
+# Role to set up a Zabbix server 
+#
+# 
+ - name: Set up required repos
+   yum: 
+     name={{ item }} 
+     state=present
+   with_items:
+     - http://repo.zabbix.com/zabbix/3.0/rhel/6/x86_64/zabbix-release-3.0-1.el6.noarch.rpm
+     - http://repo.webtatic.com/yum/el6/latest.rpm
+
+ - name: Install required mysql, php and httpd packages
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+    - php56w 
+    - php56w-gd 
+    - php56w-mysql 
+    - php56w-bcmath 
+    - php56w-mbstring 
+    - php56w-xml 
+    - php56w-ldap
+    - php56w-cli
+    - httpd
+    - httpd-devel
+    - MySQL-python
+    - mysql
+    - mysql-connector-python
+
+ - name: Install Zabbix software
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+    - zabbix-server-mysql
+    - zabbix-web-mysql
+    - zabbix-agent
+    - zabbix-java-gateway
+
+ - name: Upload Zabbix server config
+   template:
+     src=zabbix_server.conf.j2
+     dest=/etc/zabbix/zabbix_server.conf
+
+## Apache Configs
+
+ - name: Add zabbix httpd config
+   copy: 
+     remote_src=True
+     src=/usr/share/doc/zabbix-web-3.0.4/httpd22-example.conf
+     dest=/etc/httpd/conf.d/zabbix-server.conf
+
+ - name: Set London timezone php setting
+   replace:
+     dest=/etc/httpd/conf.d/zabbix-server.conf
+     regexp="^        {{ "#" }} php_value date.timezone Europe/Riga"
+     replace="        php_value date.timezone Europe/London"
+
+ - name: Remove httpd welcome file
+   file:
+     path=/etc/httpd/conf.d/welcome.conf
+     state=absent
+
+ - name: Upload redirect file config to send / requests to /zabbix
+   copy:
+     src=zabbix-redirect.conf
+     dest=/etc/httpd/conf.d/
+
+ - name: Enable and start httpd
+   service:
+     name=httpd
+     state=started
+     enabled=yes
+
+ - name: Upload zabbix.conf.php to skip setup
+   template:
+     src=zabbix.conf.php.j2
+     dest=/etc/zabbix/web/zabbix.conf.php
+
+ - name: Start and enable zabbix services
+   service:
+     name={{ item }}
+     state=started
+     enabled=yes
+   with_items:
+    - zabbix-server
+    - zabbix-agent
+
+ - name: Install OpsGenie integration and Marid
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+    - "https://s3-us-west-2.amazonaws.com/opsgeniedownloads/repo/opsgenie-zabbix-2.7.1-1.all.noarch.rpm"
+
+ - name: Upload OpsGenie config
+   template:
+     src=opsgenie-integration.conf.j2
+     dest=/etc/opsgenie/conf/opsgenie-integration.conf
+     mode=755
+   notify:
+    - Restart marid
+
+ - name: Upload Jira integation scripts
+   copy:
+     src=jiraActionExecutor.groovy
+     dest=/var/opsgenie/marid/scripts/
+     mode=755
+     owner=opsgenie
+     group=opsgenie
+   notify:
+    - Restart marid
+
+ - name: Start Marid
+   service:
+     name=marid
+     state=started
+     enabled=yes
+
+ - name: Touch zabbix2opsgenie.log to ensure proper ownership
+   file:
+     path=/var/log/opsgenie/zabbix2opsgenie.log
+     state=touch
+     owner=zabbix
+     group=opsgenie
+
+ - name: Templated cron entry for Heartbeat call to OpsGenie
+   template:
+     src=root.j2
+     dest=/var/spool/cron/root
+     owner=root
+     group=root
+
+## OPTIONAL DB CONFIG IF FIRST INSTALLATION - CURRENTLY HARDCODED TO INSTALLED VERSION
+
+ - name: Change character set
+   command: mysql -u{{ MYSQL_USER_NAME }} -p{{ MYSQL_USER_PASS }} -h {{ MYSQL_HOST }} -e "ALTER DATABASE {{ DB_NAME }} CHARACTER SET utf8 COLLATE utf8_bin"
+   tags:
+    - db_config
+
+ - name: Run mysql insert scripts
+   mysql_db:
+     name={{ DB_NAME }}
+     login_host={{ MYSQL_HOST }}
+     login_user={{ MYSQL_USER_NAME }}
+     login_password={{ MYSQL_USER_PASS }}
+     state=import
+     target=/usr/share/doc/zabbix-server-mysql-3.0.4/create.sql.gz
+   tags:
+    - db_config

@@ -1,0 +1,10 @@
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  tasks:
+  - name: create role s3 read only
+    iam: iam_type=role name=s3_readonly_role state=present
+
+  - name: attach policy to s3 readonly role
+    iam_policy: iam_type=role iam_name=s3_readonly_role state=present policy_name=s3_readonly_policy policy_document="/etc/ansible/s3_readonly_policy.json"
+  

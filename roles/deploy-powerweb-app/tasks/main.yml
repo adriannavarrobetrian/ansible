@@ -1,0 +1,116 @@
+---
+ - name: Stat powerweb tar file
+   stat:
+     path=/tmp/powa-{{ powerweb_tar_version }}.tgz
+   register: powerweb_loc
+
+ - name: Download powerweb tar file
+   s3: mode=get bucket=greenlightpower object="applications/powa-{{ powerweb_tar_version }}.tgz" dest="/tmp/powa-{{ powerweb_tar_version }}.tgz"
+   register: powerweb_dl
+   when: not powerweb_loc.stat.exists
+
+ - name: remove directory /tmp/powerweb
+   file: path=/tmp/powerweb state=absent
+
+# - name: Backup powerweb required
+#   debug: insert backup steps   config,logs,db
+#
+# - name: clean webapp
+#   debug: clean webap
+#   when: powerweb_dl.changed
+ - name: create directory /tmp/powerweb 
+   file: path=/tmp/powerweb state=directory
+
+ - name: unpack powerweb tar
+   command: /bin/tar zxf /tmp/powa-{{ powerweb_tar_version }}.tgz -C /tmp/powerweb
+#   when: powerweb_dl.changed
+#
+ - name: unpack war files
+   command: unzip -o /tmp/powerweb/{{ item }}-{{ powerweb_version }}.war -d /store/nfs/tomcat/{{ item }}
+   become: True
+   with_items:
+     - admin
+     - api
+     - cms
+     - engine
+     - file
+     - gbase
+     - rest-api
+     - template
+
+ - name: remove directory /tmp/powerwebcfg
+   file: path=/tmp/powerwebcfg state=absent
+
+ - name: create directory /tmp/powerwebcfg
+   file: path=/tmp/powerwebcfg state=directory
+
+ - name: download config files from S3
+   s3: mode=get bucket=greenlightpower object="test/conf/{{ item }}.tgz" dest="/tmp/powerwebcfg/{{ item }}.tgz" 
+   with_items:
+     - admin
+     - api
+     - cms
+     - engine
+     - file
+     - gbase
+     - rest-api
+     - template
+
+ - name: extract config
+   command: /bin/tar zxf /tmp/powerwebcfg/{{ item }}.tgz -C /tmp/powerwebcfg
+   with_items:
+     - admin
+     - api
+     - cms
+     - engine
+     - file
+     - gbase
+     - rest-api
+     - template
+    
+ - name: copy config files
+   command: cp -R /tmp/powerwebcfg/tomcat /store/nfs
+   become: true
+
+ - name: update and copy deploy templates
+   template: src="{{ ENV }}/{{ item.config }}.deploy.properties" dest="/store/nfs/tomcat/{{ item.app }}/WEB-INF/classes/{{ item.config }}-configuration/app/{{ item.config }}.deploy.properties"
+   with_items:
+   - { app: "admin"   , config: "admin"     }
+   - { app: "api"     , config: "api"       }
+   - { app: "cms"     , config: "cms"       }
+   - { app: "engine"  , config: "engine"    }
+   - { app: "file"    , config: "file"      }
+   - { app: "gbase"   , config: "googleapi" }
+   - { app: "rest"    , config: "rest-api"  }
+   - { app: "template", config: "template"     }
+
+ - name: set permissions /store/nfs/tomcat
+   command: chown -R tomcat.tomcat /store/nfs/tomcat/{{ item }} 
+   become: true
+   with_items:
+     - admin
+     - api
+     - cms
+     - engine
+     - file
+     - gbase
+     - rest
+     - template
+   
+# - name: copy / unpack war files
+#   debug: copy / unpack war files
+#   register: powerweb_install
+#   when: powerweb_dl.changed
+#  
+# - name: unpack configuration
+#   debug: unpack configuration
+#   when: powerweb_install.changed 
+#
+# - name: copy deploy properties from templates
+#   debug: copy deploy properties from templates
+#   register: powerweb_finished
+#   when: powerweb_install.changed
+#
+# - name: cleanup tmp files
+#   debug: cleanup tmp files
+#   when: powerweb_finished.changed

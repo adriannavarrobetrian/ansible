@@ -1,0 +1,9 @@
+---
+ - name: Stop jenkins-complete
+   hosts: "{{ targets }}"
+   vars:
+     group: "{{ group }}"
+     ports:
+      - 22
+   roles:
+    - server-stop

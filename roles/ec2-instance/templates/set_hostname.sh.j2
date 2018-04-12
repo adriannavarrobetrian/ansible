@@ -1,0 +1,7 @@
+#!/bin/bash
+
+echo "{{ inventory_hostname }}" >> /etc/hostname
+
+cat /etc/sysconfig/network | sed "s/HOSTNAME=`hostname`/HOSTNAME="{{ inventory_hostname }}"/" > /tmp/network.tmp
+
+mv /tmp/network.tmp /etc/sysconfig/network

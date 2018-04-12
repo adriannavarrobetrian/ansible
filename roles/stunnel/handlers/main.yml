@@ -1,0 +1,5 @@
+---
+ - name: Reload stunnel
+   service:
+     name=stunnel
+     state=reloaded

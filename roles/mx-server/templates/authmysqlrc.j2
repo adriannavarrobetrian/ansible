@@ -1,0 +1,12 @@
+MYSQL_SERVER            mysql-01.{{ ENV }}.glp
+MYSQL_USERNAME          exim
+MYSQL_PASSWORD          {{ EXIM_PASSWD }}  
+MYSQL_DATABASE          cms
+MYSQL_USER_TABLE        mailbox
+MYSQL_CLEAR_PWFIELD     user_passwd
+MYSQL_UID_FIELD         93
+MYSQL_GID_FIELD         93
+MYSQL_LOGIN_FIELD       user_name
+MYSQL_HOME_FIELD        spool_dir
+MYSQL_NAME_FIELD        spool_dir
+MYSQL_MAILDIR_FIELD     space_quota

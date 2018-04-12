@@ -1,0 +1,98 @@
+# Role to create AWS Instances
+---
+ - name: Find latest non-secure AMI
+   ec2_ami_find:
+     owner: "055475603513"
+     region: "eu-west-1"
+     ami_tags:
+       Name: "glp-non-secure-centos-6.8"
+   register: non_secure_ami
+   when: AMI == "non-secure"
+
+ - name: Find latest secure AMI
+   ec2_ami_find:
+     owner: "055475603513"
+     region: "eu-west-1"
+     ami_tags:
+       Name: "glp-secure-centos-6.8"
+   register: secure_ami
+   when: AMI == "secure"
+
+ - name: Define non-secure AMI use where appropriate
+   set_fact:
+     AMI_TYPE: "{{ non_secure_ami.results[0].ami_id }}"
+   when: AMI == "non-secure"
+
+ - name: Define secure AMI use where appropriate
+   set_fact:
+     AMI_TYPE: "{{ secure_ami.results[0].ami_id }}"
+   when: AMI == "secure"
+
+ - name: Create Instance
+   ec2:
+     exact_count=1
+     key_name="buildscm"
+     group="{{ SEC_GROUP }}"
+     image="{{ AMI_TYPE }}"
+     instance_type="{{ TYPE }}"
+     instance_profile_name="{{ IAM_ROLE }}"
+     vpc_subnet_id="{{ VPC_SUBNET }}"
+     aws_region="eu-west-1"
+     instance_tags="{{ TAGS }}"
+     count_tag="{{ TAGS }} "
+     assign_public_ip="{{ PUBLIC_IP }}"
+     user_data="{{ lookup('template', 'templates/set_hostname2.yml.j2') }}"
+     volumes="{{ VOLUMES }}"
+#     private_ip="{{ PRIV_IP }}" 
+   register: ec2
+
+ - name: List the volumes for the instance
+   ec2_vol:
+     instance="{{ item.id }}"
+     region=eu-west-1
+     state=list
+   with_items: "{{ ec2.tagged_instances }}"
+   register: ec2_vol
+
+ - name: Tag the volumes for backup
+   ec2_tag:
+     region: eu-west-1
+     resource: "{{ item.id }}"
+     state: present
+     tags:
+       backup: true
+   with_items: 
+    - "{{ ec2_vol.results.0.volumes }}"
+   when: BACKUP is defined
+
+ - name: Create DNS records
+   route53:
+     command: create
+     zone: "{{ ENV }}.{{ ZONE }}"
+     record: "{{ inventory_hostname }}"
+     type: A
+     ttl: 60
+     value: "{{ item.private_ip }}"
+     overwrite: yes
+     private_zone: yes
+     retry_interval: 10
+   with_items: "{{ ec2.instances }}"
+   when: ec2.changed
+
+ - name: Ensure Instance is up
+   wait_for:
+     host="{{ inventory_hostname }}"
+     port=22 
+     delay=10 
+     timeout=320 
+     state=started
+   with_items: "{{ ec2.instances }}"
+
+ - name: Associate Elastic IP if required
+   ec2_eip:
+     device_id={{ item.id }}
+     release_on_disassociation=yes
+     region="eu-west-1"
+     in_vpc=true 
+   with_items: "{{ ec2.instances }}"
+   when: ELIP is defined

@@ -1,0 +1,44 @@
+# Role to install and upload the standard settings for mod_security Apache WAF
+#
+# Relies on having apache installed already
+#
+---
+ - name: Install mod_security
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+    - mod_security
+    - mod_security_crs
+   notify:
+    - Restart httpd
+
+ - name: Add blank whitelist file
+   file:
+     path=/etc/httpd/modsecurity.d/modsecurity-whitelist.conf
+     state=touch
+
+ - name: Add line to include modsecurity-whitelist.conf
+   lineinfile:
+     dest=/etc/httpd/conf.d/mod_security.conf
+     insertafter="Include modsecurity.d/activated_rules/\*.conf"
+     line="        Include modsecurity.d/modsecurity-whitelist.conf" 
+
+ - name: Upload and link additional CRS security definitions
+   copy:
+     src={{ item }}
+     dest=/usr/lib/modsecurity.d/base_rules/{{ item }}
+   with_items:
+    - modsecurity_crs_43_csrf_protection.conf
+   notify:
+    - Restart httpd
+
+ - name: Create symlink to additional CRS security definitions
+   file:
+     dest=/etc/httpd/modsecurity.d/activated_rules/{{ item }}
+     src=/usr/lib/modsecurity.d/base_rules/{{ item }}
+     state=link
+   with_items:
+    - modsecurity_crs_43_csrf_protection.conf
+   notify:
+    - Restart httpd 

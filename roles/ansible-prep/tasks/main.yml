@@ -1,0 +1,46 @@
+# Role to create Ansible environment for Centos6
+---
+ - name: Upload Ansible rpm
+   copy:
+     src=/etc/ansible/rpm/ansible-2.2.0.0-1.el6.noarch.rpm
+     dest=/tmp
+   register: rpm_loc
+   when: (ansible_distribution == "CentOS") and (ansible_distribution_major_version == "6")
+
+ - name: Install Ansible 2.2 from compiled rpm
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+     - git 
+     - "{{ rpm_loc.dest }}"
+     - python-boto
+
+ - name: Remove Ansible rpm from /tmp
+   file:
+     path={{ rpm_loc.dest }}
+     state=absent
+
+# - name: Checkout latest Ansible code
+#   git:
+#     repo="ssh://git@bitbucket.org/antonpm/ansible-powa.git"
+#     dest=/etc/ansible/
+#     accept_hostkey=yes
+#     key_file=/root/.ssh/id_rsa
+
+ - name: Create pass directory
+   file:
+     path=/etc/ansible/pass
+     state=directory
+   register: vault_dir
+
+ - name: Upload .vault_pass file
+   template:
+     src=.vault_pass.j2
+     dest={{ vault_dir.path }}/.vault_pass
+     mode=600
+
+ - name: Create bashrc entries
+   lineinfile:
+     dest=/root/.bashrc 
+     line="export ANSIBLE_VAULT_PASSWORD_FILE=/etc/ansible/pass/.vault_pass"

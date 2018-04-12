@@ -1,0 +1,33 @@
+# Role to set up Zabbix monitoring on varnish cache servers
+#
+# Dependencies
+# - zabbix-agent
+# - varnish
+
+---
+ - name: Upload monitoring scripts
+   copy:
+    src=zabbix-varnish-cache.py
+    dest=/usr/local/bin
+    owner=zabbix
+    group=zabbix
+    mode=u+x
+
+ - name: Edit zabbix user to be in varnish group
+   user:
+     name=varnish
+     groups=zabbix
+
+ - name: Create cron job to send stats in 
+   cron:
+     name: "Cron to send Varnish stats to Zabbix"
+     job: "/usr/local/bin/zabbix-varnish-cache.py -i '' send -c /etc/zabbix/zabbix_agentd.conf -s `hostname` > /dev/null 2>&1"
+    
+ - name: Upload zabbix params file
+   copy:
+     src=userparameter_varnish.conf
+     dest=/etc/zabbix/zabbix_agentd.d/userparameter_varnish.conf
+     owner=zabbix
+     group=zabbix
+   notify:
+    - Restart zabbix-agent

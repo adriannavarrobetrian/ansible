@@ -1,0 +1,8 @@
+#!/bin/bash
+
+/etc/init.d/tomcat_cms start
+sleep 5
+/etc/init.d/tomcat_engine start
+sleep 5
+jps
+sleep 10

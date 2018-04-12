@@ -1,0 +1,22 @@
+# Playbook to launch test Load Balancers
+#
+ - name: Create instance
+   hosts: nicky-lb.sb.glp
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Set up haproxy
+   hosts: nicky-lb.sb.glp
+   become: yes
+   vars:
+     ssh_users:
+      - "neastes"
+   roles:
+     - ssh-users
+     - common
+     - glp-repo
+     - stunnel
+     - haproxy
+     - java
+     - serverrmiconsole-lb

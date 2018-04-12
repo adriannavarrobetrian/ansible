@@ -1,0 +1,94 @@
+# Role to set postfix to use AWS SES
+#
+#
+---
+ - name: Create main.cf
+   lineinfile:
+     dest=/etc/postfix/main.cf
+     line={{ item }}
+   with_items:
+    - "relayhost = 127.0.0.1:2525"
+    - "smtp_sasl_auth_enable = yes"
+    - "smtp_sasl_security_options = noanonymous"
+    - "smtp_tls_security_level = may"
+    - "smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd"
+
+ - name: Adjust master.cf
+   replace:
+     dest=/etc/postfix/master.cf
+     regexp="smtp_fallback_relay"
+     replace="#-o smtp_fallback_relay="
+
+ - name: Create /etc/postfix/sasl_passwd
+   template:
+     src=sasl_passwd.j2
+     dest=/etc/postfix/sasl_passwd
+
+ - name: Run postmap command
+   command: postmap hash:/etc/postfix/sasl_passwd
+
+ - name: Remove /etc/postfix/sasl_passwd (not needed now)
+   file:
+     path=/etc/postfix/sasl_passwd
+     state=absent
+
+ - name: Set perms of /etc/postfix/sasl_passwd.db
+   file:
+     path=/etc/postfix/sasl_passwd.db
+     mode=600
+     owner=root
+     group=root
+
+ - name: Run postconf command
+   command: postconf -e 'smtp_tls_CAfile = /etc/ssl/certs/ca-bundle.crt'
+
+ - name: Upload stunnel
+   copy:
+     src=stunnel-5.23-1.x86_64.rpm
+     dest=/tmp
+   register: stunnel_rpm
+
+ - name: Install stunnel rpm and sasl libs
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+    - "{{ stunnel_rpm.dest }}"
+    - cyrus-sasl-plain
+    - cyrus-sasl-devel
+    - cyrus-sasl-lib
+    - cyrus-sasl
+
+ - name: Remove stunnel rpm file
+   file:
+     path="{{ stunnel_rpm.dest }}"
+     state=absent
+
+ - name: Upload stunnel.conf
+   copy:
+     src=stunnel.conf
+     dest=/etc/stunnel/
+
+ - name: Upload mail.pem
+   copy:
+     src=mail.pem
+     dest=/etc/stunnel/mail.pem
+     mode=400
+
+ - name: Upload better stunnel init.d script
+   copy:
+     src=stunnel
+     dest=/etc/init.d/stunnel
+     mode=u+x 
+
+ - name: Start and enable Stunnel
+   service:
+     name=stunnel
+     state=started
+     enabled=yes
+
+ - name: Restart and enable postfix
+   service:
+     name=postfix
+     state=restarted
+     enabled=yes

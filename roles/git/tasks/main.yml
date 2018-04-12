@@ -1,0 +1,8 @@
+# Role to install and configure git
+# Anton Pritchard-Meaker
+# Need to get keys from devs
+---
+ - name: Install git
+   yum:
+     name=git
+     state=present

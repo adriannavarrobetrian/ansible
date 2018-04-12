@@ -1,0 +1,56 @@
+# Role to unpack and install ActiveMQ
+# Anton Pritchard-Meaker
+---
+# - name: Create /store
+#   file:
+#     path=/store/activemq
+#     state=directory
+#     recurse=yes
+#   register: store_dir
+
+ - name: Unpack ActiveMQ
+   unarchive:
+     src=apache-activemq-5.8.0-bin.tar.gz
+     dest=/opt/
+   register: activemq
+
+ - name: Symlink ActiveMQ
+   file:
+     src={{ activemq.dest }}/apache-activemq-5.8.0
+     dest=/opt/activemq
+     state=link
+
+ - name: Change ownership to root
+   file:
+     path=/opt/
+     owner=root
+     group=root
+     recurse=yes
+     state=directory
+
+ - name: Symlink script
+   file:
+     src=/opt/activemq/bin/linux-x86-64/activemq
+     dest=/etc/init.d/activemq
+     state=link
+
+# - name: Move dirs to /store
+#   command: mv /opt/activemq/{{ item }} {{ store_dir.path }}
+#   with_items:
+#    - conf
+#    - data
+
+# - name: Symlink to store dirs
+#   file:
+#     src="{{ store_dir.path }}/{{ item }}"
+#     dest=/opt/activemq/{{ item }}
+#     state=link
+#   with_items:
+#    - conf
+#    - data
+
+ - name: Enable activemq
+   service: 
+     name=activemq 
+     enabled=yes 
+     state=started

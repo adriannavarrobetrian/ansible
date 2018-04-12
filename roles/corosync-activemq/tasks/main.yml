@@ -1,0 +1,132 @@
+# Role to install corrosync for Activemq
+#
+# Depends on:
+# - corosync
+---
+ - name: Make store dir
+   file:
+     path=/store
+     state=directory
+
+ - name: Stop and disable services
+   service:
+     name={{ item }}
+     state=stopped
+     enabled=no
+   with_items:
+    - activemq
+    - drbd
+
+ - name: Get ENI Facts
+   ec2_eni_facts:
+     region: eu-west-1
+     filters:
+       private-ip-address: "{{ ansible_default_ipv4.address }}"
+   delegate_to: localhost
+   become: no
+   register: eni
+
+ - name: Assign secondary Private IP
+   command: aws ec2 assign-private-ip-addresses --network-interface-id {{ eni.interfaces.0.id }} --private-ip-addresses {{ VIP }}
+   delegate_to: localhost
+   become: no
+   when: "'01' in inventory_hostname"
+
+ - name: Create DNS record for VIP
+   route53 :
+     command: create
+     zone: "{{ ENV }}.{{ ZONE }}"
+     record: "mq-vip.{{ ENV }}.{{ ZONE }}"
+     type: A
+     ttl: 60
+     value: "{{ VIP }}"
+     overwrite: yes
+     private_zone: yes
+     retry_interval: 10
+   delegate_to: localhost
+   become: no
+   when: "'01' in inventory_hostname"
+
+ - name: Start corosync 
+   service:
+     name=corosync
+     state=started
+     enabled=yes
+
+ - name: Pause to allow corosync to start
+   pause: 
+     seconds=20
+
+ - name: Make resource dirs
+   file:
+     path={{ item }}
+     state=directory
+   with_items:
+    - "/usr/lib/ocf/resource.d/ec2/"
+    - "/usr/lib/ocf/resource.d/linbit/"
+
+ - name: Upload EC2 VIP script
+   template:
+     src=virtual-ip.j2
+     dest=/usr/lib/ocf/resource.d/ec2/virtual-ip
+     mode=u+x
+
+ - name: Upload linbit drbd config
+   copy:
+     src=drbd
+     dest=/usr/lib/ocf/resource.d/linbit/drbd
+     mode=u+x
+
+ - name: Set Standard settings for corosync
+   shell: "{{ item }}"
+   with_items:
+    - "crm configure property no-quorum-policy=ignore"
+    - "crm configure property stonith-enabled=false"
+    - "crm configure rsc_defaults resource-stickiness=100"
+   when: "'01' in inventory_hostname"
+
+ - name: Enable required Services
+   command: "{{ item }}"
+   with_items:
+    - "crm configure primitive virtual-ip ocf:ec2:virtual-ip op monitor timeout=90 interval=90 on-fail=restart failure-timeout=60s op start timeout=40s interval=0 op stop timeout=60s interval=0 meta is-managed=true resource-stickiness=100 failure-timeout=90 target-role=Started migration-threshold=3"
+    - "crm configure primitive drbd_res_store ocf:linbit:drbd params drbd_resource=store op monitor interval=2s"
+    - "crm configure primitive amq-server lsb:activemq op start interval=0 timeout=120 op stop interval=0 timeout=120 meta target-role=Started"
+    - "crm configure primitive fs_store Filesystem params device=\"/dev/drbd0\" directory=\"/store\" fstype=ext4"
+    - "crm configure group crm_mq fs_store amq-server virtual-ip"
+    - "crm configure ms ms_drbd_store drbd_res_store meta master-max=1 master-node-max=1 clone-max=2 clone-node-max=1 notify=true"
+    - "crm configure location drbd-fence-by-handler-store-ms_drbd_store ms_drbd_store rule $role=Master -inf: #uname ne {{ inventory_hostname }}"
+    - "crm configure colocation fs_on_drbd inf: crm_mq ms_drbd_store:Master"
+    - "crm configure order srv_after_drbd inf: ms_drbd_store:promote crm_mq:start"
+   when: "'01' in inventory_hostname"
+
+ - name: Sleep 1 minute to allow storage to come up
+   pause:
+     seconds=60
+ 
+ - name: Create /store/activemq
+   file:
+     path=/store/activemq
+     state=directory
+     recurse=yes
+   register: store_dir
+
+ - name: Move dirs to /store
+   command: mv /opt/activemq/{{ item }} /store/activemq
+   with_items:
+    - conf
+    - data
+
+ - name: Symlink to store dirs
+   file:
+     src=/store/activemq/{{ item }}
+     dest=/opt/activemq/{{ item }}
+     state=link
+   with_items:
+    - conf
+    - data
+
+ - name: Restart activemq
+   service:
+     name=activemq
+     state=restarted
+   when: "'01' in inventory_hostname"

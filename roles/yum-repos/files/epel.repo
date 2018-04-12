@@ -1,0 +1,7 @@
+[epel]
+name=Extra Packages for Enterprise Linux 6 - $basearch
+baseurl=http://repo.powa.pci/epel/6/$basearch
+failovermethod=priority
+enabled=1
+gpgcheck=1
+gpgkey=http://repo.powa.pci/epel/RPM-GPG-KEY-EPEL-6

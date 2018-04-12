@@ -1,0 +1,14 @@
+# Playbook to spawn an apache server
+ - name: Create ActiveMQ server
+   hosts: mq-test 
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Install ActiveMQ 
+   hosts: mq-test
+   become: yes
+   roles:
+     - java
+     - activemq 
+     - zabbix-agent-start

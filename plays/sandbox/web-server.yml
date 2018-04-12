@@ -1,0 +1,15 @@
+# Playbook to spawn an apache server
+ - name: Create Apache server
+   hosts: web-sb
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Install Apache 
+   hosts: web-sb
+   become: yes
+   roles:
+     - apache
+     - apache-config-powa 
+     - serverrmiconsole-httpd
+     - zabbix-agent-start

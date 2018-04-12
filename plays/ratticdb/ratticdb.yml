@@ -1,0 +1,19 @@
+# Playbook to launch ratticdb server 
+---
+ - name: Launch AWS Instance for RatticDB
+   hosts: ratticdb-prod 
+   connection: local
+   roles:
+    - ec2-instance
+
+ - name: Installation and Configuration
+   hosts: ratticdb-prod
+   become: yes
+   roles:
+    - mount
+    - {role: postfix-ses, tags: postfix-ses}
+    - mysql5.5
+    - apache
+    - apache-mod_sec
+    - ratticdb-app
+    - zabbix-agent-start

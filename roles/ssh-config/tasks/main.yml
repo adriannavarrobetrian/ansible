@@ -1,0 +1,19 @@
+# Role to configure ssh to harden security and allow sudo access to wheel users
+---
+ - name: Upload issue file
+   copy:
+     src=issue
+     dest=/etc/
+
+ - name: Activate wheel group in sudoers
+   lineinfile:
+     dest=/etc/sudoers
+     insertafter="## Same thing without a password"
+     line="%wheel        ALL=(ALL)       NOPASSWD{{ ":" }} ALL"
+
+ - name: Upload standard sshd_config
+   copy:
+     src=sshd_config
+     dest=/etc/ssh/
+   notify:
+     - Restart sshd        

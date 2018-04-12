@@ -1,0 +1,10 @@
+# Playbook to set up users with admin access via ssh
+---
+ - name: Create ssh access
+   hosts: all
+   become: yes
+   vars:
+     ssh_users:
+      - "jneilson"
+   roles:
+    - ssh-users

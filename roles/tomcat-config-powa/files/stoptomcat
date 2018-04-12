@@ -1,0 +1,23 @@
+#!/bin/bash
+
+/etc/init.d/tomcat_cms stop
+sleep 5
+/etc/init.d/tomcat_engine stop
+
+sleep 30
+
+stillrunning=$(jps | grep Bootstrap | awk '{print $1}')
+
+for process in $stillrunning
+do
+   echo -n "Bootstrap process $process is still running. Killing... "
+   kill $process
+   if [ $? -eq 0 ]; then
+      echo "done."
+   else
+      echo "failed!"
+   fi
+done
+
+sleep 5
+jps

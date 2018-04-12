@@ -1,0 +1,16 @@
+ - name: Check API Jobs Amount
+   command: mysql --disable-column-names -B -e "SELECT count(*) FROM api.job_queue WHERE status='PROCESSING';"
+   register: processing
+
+ - name: Disable API
+   command: mysql --disable-column-names -B -e "UPDATE api.web_application_settings SET bool_value=1 WHERE setting='shutting_down';"
+   register: disable
+#   when: processing.stdout == "0"
+
+ - name: Fail if processing jobs detected
+   fail: msg="Processing jobs detected, please investigate"
+   when: processing.stdout != "0"
+
+ - name: Fail if API disable not ok
+   fail: msg="Task to DISABLE API did not succeed, please check"
+   when: processing.rc != 0

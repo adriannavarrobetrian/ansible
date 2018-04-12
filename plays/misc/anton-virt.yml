@@ -1,0 +1,13 @@
+# Test Playbook to set up Ansible env
+# Anton Pritchard-Meaker
+---
+ - name: Set up Ansible Env
+   hosts: localhost
+   become: no
+   roles:
+#    - { role: epel, tags: [ epel ] }
+    - { role: ansible-prep, tags: [ ansible-prep ] }
+    - { role: nginx, tags: [ nginx ] }
+#    - { role: nginx-http-repo, tags: [ nginx-http-repo ] }
+    - { role: packer-install, tags: [ packer-install ] }
+    - { role: aws-cli, tags: [ aws-cli ] }

@@ -1,0 +1,57 @@
+# Role to install Java 8 JDK via RPM
+#
+# This role will upgrade from Java 7 if found
+---
+ - name: Stat existence of Java
+   stat: 
+     path=/usr/java/
+   register: java_loc
+
+ - name: Get existing java version
+   shell: rpm -qa | grep "jdk"
+   register: jdk_ver
+   ignore_errors: yes
+
+ - name: Download Java from Oracle
+   s3:
+     mode=get
+     bucket=greenlightpower
+     object=installers/jdk-8u101-linux-x64.rpm
+     dest=/tmp/jdk-8u101-linux-x64.rpm
+     aws_access_key={{ AWS_ACCESS_KEY }}
+     aws_secret_key={{ AWS_SECRET_KEY }}
+   register: java_dl
+#   when: not java_loc.stat.exists or jdk_ver.stdout | match('^jdk-1.7(.*)')
+
+ - name: Install Java RPM
+   yum: 
+     name=/tmp/jdk-8u101-linux-x64.rpm
+     state=present    
+   register: java_install
+   when: java_dl.changed
+
+ - name: Clean up Java RPM
+   file:
+     path=/tmp/jdk-8u101-linux-x64.rpm
+     state=absent
+   when: java_dl.changed
+
+ - name: Set JAVA_HOME in .bashrc
+   lineinfile:
+     line={{ item }}
+     dest=/root/.bashrc
+   with_items:
+     - "export JAVA_HOME=/usr/java/latest"
+     - "export PATH=$JAVA_HOME/bin:$PATH"
+   when: java_install.changed
+
+ - name: Extract Unlimited JCE Policy for JDK8
+   unarchive:
+     src=UnlimitedJCEPolicyJDK8.tar.bz2
+     dest=/usr/java/latest/jre/lib/security
+   when: java_install.changed
+
+ - name: Remove Java 7 if found
+   yum:
+     name=jdk-1.7*
+     state=absent

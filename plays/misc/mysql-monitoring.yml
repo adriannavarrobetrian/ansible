@@ -1,0 +1,7 @@
+# Playbook to launch test mysql server for rlukosevicius
+---
+ - name: Set up MySQL
+   hosts: secure-euw1a-powaweb-prod-mysql-1.powa.pci
+   become: yes
+   roles:
+    - mysql5.1

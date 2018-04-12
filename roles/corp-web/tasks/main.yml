@@ -1,0 +1,63 @@
+ - name: Install required packages
+   yum: 
+     name={{ item }}
+     state=present
+   with_items:
+    - php-gd
+    - php
+
+ - name: Create DB
+   mysql_db:
+     name=GLPowerDatabase
+     state=present
+
+ - name: Create MySQL users
+   mysql_user: 
+     name={{ CORP_DB_USER }}
+     password={{ CORP_DB_PASS }}
+     priv="GLPowerDatabase.*:ALL"  
+     state=present
+ 
+ - name: Create ssl config dirs
+   file:
+     path=/etc/httpd/conf.d/ssl/{{ item }}
+     state=directory
+     recurse=yes
+   with_items:
+    - key
+    - ca
+    - cert
+
+ - name: Upload site ssl certs
+   copy:
+     content="{{ item.value }}"
+     dest="/etc/httpd/conf.d/ssl/{{ item.key }}/greenlightpower.{{ item.key }}"
+     mode=640
+   with_dict:
+     "{{ SSL_DICT }}"
+
+ - name: Upload mod_sec whitelist
+   copy:
+     src=modsecurity-whitelist.conf
+     dest=/etc/httpd/modsecurity.d/ 
+
+ - name: Create cache dir
+   file:
+     path=/var/cache/apache
+     state=directory
+     owner=apache
+     group=apache
+
+ - name: Upload disk cache config
+   copy:
+     src=cache.conf
+     dest=/etc/httpd/conf.d/
+   notify:
+    - Restart httpd
+
+ - name: Upload Site apache config
+   copy:
+     src=greenlightpower.conf
+     dest=/etc/httpd/conf.d/
+   notify:
+    - Restart httpd 

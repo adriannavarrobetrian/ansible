@@ -1,0 +1,15 @@
+# Playbook to launch prod Zabbix server and associated database
+---
+ - name: Launch Instance
+   hosts: monitoring-prod
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Set up Zabbix Server software
+   hosts: monitoring-prod
+   become: yes
+   roles:
+     - common
+     - postfix-ses
+     - zabbix-server

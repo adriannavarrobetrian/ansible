@@ -1,0 +1,87 @@
+# Role to install corrosync
+#
+# Depends on:
+# - corosync
+---
+ - name: Get Private Route Table Facts
+   ec2_vpc_route_table_facts: 
+     region: "{{ REGION }}"
+     filters:
+       "tag:Name": "{{ ENV }}-priv-rtb-{{ REGION }}"
+   register: priv_rtb_facts
+   delegate_to: localhost
+   become: no
+
+ - name: Get ENI Facts
+   ec2_eni_facts:
+     region: eu-west-1
+     filters:
+       private-ip-address: "{{ ansible_ec2_local_ipv4 }}"
+   delegate_to: localhost
+   become: no
+   register: eni
+
+ - name: Attach secondary IP to eni
+   ec2_eni:
+     subnet_id: "{{ eni.network_interfaces.0.subnet_id }}"
+     eni_id: "{{ eni.network_interfaces.0.network_interface_id }}"
+     region: eu-west-1
+     secondary_private_ip_address_count: 1
+   delegate_to: localhost
+   become: no
+
+ - name: Get ENI Facts
+   ec2_eni_facts:
+     region: eu-west-1
+     filters:
+       private-ip-address: "{{ ansible_ec2_local_ipv4 }}"
+   delegate_to: localhost
+   become: no
+   register: eni_2
+
+ - name: Create secondary IP networking config
+   template:
+     src=ifcfg.j2
+     dest="/etc/sysconfig/network-scripts/ifcfg-eth0:0"
+   register: network_config
+
+ - name: Reload Network
+   service:
+     name=network
+     state=reloaded
+   when: network_config.changed
+
+ - name: Restart corosync after network reload
+   service:
+     name=corosync
+     state=restarted
+     enabled=yes
+   when: network_config.changed
+
+ - name: Pause to allow corosync to start
+   pause: 
+     seconds=20
+
+ - name: Make ec2 resource dir
+   file:
+     path=/usr/lib/ocf/resource.d/ec2/
+     state=directory
+
+ - name: Upload EC2 VIP script
+   template:
+     src=elastic-ip.j2
+     dest=/usr/lib/ocf/resource.d/ec2/elastic-ip
+     mode=u+x
+
+ - name: Set Standard settings for corosync
+   shell: "{{ item }}"
+   with_items:
+    - "crm configure property no-quorum-policy=ignore"
+    - "crm configure property stonith-enabled=false"
+   when: "'01' in inventory_hostname"
+
+ - name: Enable required Services
+   command: "{{ item }}"
+   with_items:
+    - "crm configure primitive VIP ocf:ec2:elastic-ip op monitor timeout=90 interval=90 on-fail=restart failure-timeout=60s op start timeout=40s interval=0 op stop timeout=60s interval=0 meta is-managed=true resource-stickiness=100 failure-timeout=90 target-role=Started migration-threshold=3"
+   when: "'01' in inventory_hostname"

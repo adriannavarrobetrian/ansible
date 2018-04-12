@@ -1,0 +1,41 @@
+# Role to create static zones for DNS servers
+# 
+# Not env specific, see variables and files dir
+#
+# Relies on the named-auth-servers role running first
+---
+ - set_fact:
+     master=ns-aux-01.{{ ENV }}.{{ ZONE }}
+     slave=ns-aux-02.{{ ENV }}.{{ ZONE }}
+
+ - name: Upload static configs for Master
+   template:
+     src=zones_static_master.j2
+     dest=/etc/named/zones_static.conf
+     owner=named
+     group=named
+   with_items:
+    - "{{ dns_zones }}"
+   when: ROLE == "master"
+
+ - name: Upload static configs for Slave
+   template:
+     src=zones_static_slave.j2
+     dest=/etc/named/zones_static.conf
+     owner=named
+     group=named
+   with_items:
+    - "{{ dns_zones }}"
+   when: ROLE == "slave"
+
+ - name: Upload zone config files
+   copy:
+     src={{ ENV }}/{{ item }}
+     dest=/var/named/static/{{ item }}
+     owner=named
+     group=named
+   with_items:
+    - "{{ dns_zones }}"
+   when: ROLE == "master"
+   notify:
+    - Reload named

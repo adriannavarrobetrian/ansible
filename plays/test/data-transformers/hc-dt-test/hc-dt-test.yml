@@ -1,0 +1,19 @@
+# Play to launch Data Transformer for Collins sites
+---
+ - name: Launch Instance
+   hosts: hc-dt-test
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Configure hc-dt
+   hosts: hc-dt-test
+   become: yes
+   vars:
+     ssh_users:
+      - "neastes"
+   roles:
+    - ssh-users
+    - mount
+    - hc-dt-config
+    - apache

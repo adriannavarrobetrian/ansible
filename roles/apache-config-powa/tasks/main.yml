@@ -1,0 +1,99 @@
+# Role to upload the Powa Web apache config
+#
+# Does the following:
+#  - Should get the Apache configs ready so that Server Updater can be run to upload the site domain configs
+#  - Dynamically populates the workers.properties file based on the Ansible hosts entry for app servers
+#  - Mounts the NFS dirs for content
+#  - Creates the static vhost entries for admin/api
+# Dependencies:
+#  - apache
+#  - nfs-client 
+---
+ - name: Upload maintenance script
+   copy:
+     src=maintenance
+     dest=/root/
+     mode=744
+
+ - name: Upload httpd.tar
+   unarchive:
+     src={{ ENV }}/httpd.tar.bz2
+     dest=/etc/httpd/
+
+ - name: Remove domains dir (to be re-created by serverupdater)
+   file:
+     path={{ item }}
+     state=absent
+   with_items:
+    - /etc/httpd/conf.d/domains
+
+ - name: Upload compiled mod_jk
+   copy:
+     src=mod_jk.so
+     dest=/usr/lib64/httpd/modules
+
+ - name: Upload reconfigured /etc/httpd/conf.d/workers.properties
+   template:
+     src=workers.properties.j2
+     dest=/etc/httpd/conf.d/workers.properties
+   notify:
+    - Restart httpd
+
+ - name: Upload static domain configs
+   template:
+     src=site.j2
+     dest=/etc/httpd/conf.d/domains_static/{{ item }}.conf
+   with_items:
+    - "{{ domains_static }}"
+   notify:
+    - Restart httpd
+
+ - name: Upload static vhost config definition
+   template:
+     src=vhost_static.conf.j2
+     dest=/etc/httpd/conf.d/vhost_static.conf
+   notify:
+    - Restart httpd
+
+ - name: Add servername to httpd.conf
+   replace:
+     dest=/etc/httpd/conf/httpd.conf
+     regexp='^ServerName.*'
+     replace='ServerName {{ inventory_hostname }}:80'
+
+ - name: Add X-Forward line 
+   lineinfile:
+     dest=/etc/httpd/conf.d/mod_jk.conf
+     insertafter="JkMountCopy All" 
+     line="SetEnvIf X-Forwarded-Proto https HTTPS=on"
+
+ - name: Create and chown vhost.conf to rmiuser.apache
+   file:
+     path=/etc/httpd/conf.d/vhost.conf
+     state=touch
+
+ - name: Add NameVirtualHost entry for port 80
+   replace:
+     dest=/etc/httpd/conf.d/vhost.conf
+     regexp='^NameVirtualHost.*'
+     replace='NameVirtualHost {{ ansible_default_ipv4.address }}:80'
+
+ - name: create /web mountpoint
+   file: 
+     path=/web 
+     state=directory 
+     mode=0755
+
+ - name: Mount dirs
+   mount:
+     name={{ item.name }}
+     src=nfs-01.{{ ENV }}.{{ ZONE }}:/store/nfs/{{ item.src }}
+     state=mounted
+     fstype=nfs4
+     opts="_netdev,ro,noatime,rsize=65536,wsize=65536,timeo=14,intr"
+   with_items:
+    - { name: "/web",                 src: "web" }
+    - { name: "/web/cms_resource",    src: "tomcat/resources/cms" }
+    - { name: "/web/engine_resource", src: "tomcat/resources/engine" }
+    - { name: "/web/template",        src: "tomcat/template/WEB-INF/template" }
+    - { name: "/web/file",            src: "tomcat/resources/file" }

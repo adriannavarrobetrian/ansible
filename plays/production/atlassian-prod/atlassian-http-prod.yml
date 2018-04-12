@@ -1,0 +1,41 @@
+# Playbook to launch Front-end Atlassian http proxy server
+#
+# USAGE: ansible-playbook atlassian-http-prod.yml  -u $YOUR_USERNAME
+#
+# VARS: Stored in group_vars
+
+ - name: Launch Instance
+   hosts: atlassian-http-prod
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Configure Server
+   hosts: atlassian-http-prod
+   become: yes
+   roles:
+    - zabbix-agent-start
+   tasks:
+     - name: Install required packages
+       yum:
+         name={{ item }}
+         state=present 
+       with_items:
+        - nano 
+        - vim 
+        - htop 
+        - iftop 
+        - iotop 
+        - nmap 
+        - tcptraceroute 
+        - screen 
+        - tcpdump 
+        - policycoreutils-python 
+        - yum-plugin-security 
+        - mlocate 
+        - crontabs 
+        - wget 
+        - tree 
+        - socat
+        - httpd
+        - mod_ssl

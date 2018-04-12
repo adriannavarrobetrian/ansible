@@ -1,0 +1,8 @@
+# Load the Pacemaker Cluster Resource Manager
+service {
+        # This is the name of the plugin to load. It must match a
+        name: pacemaker
+   
+        # This is the version of the service engine to use, and should usually be '0'.
+        ver:  0
+}

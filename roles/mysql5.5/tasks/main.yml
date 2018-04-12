@@ -1,0 +1,62 @@
+# Role to install Mysql 5.5 (current used version)
+# Anton Pritchard-Meaker
+---
+ - name: Install MySQL repo RPM
+   yum:
+     name=https://dev.mysql.com/get/mysql57-community-release-el6-7.noarch.rpm
+     state=present
+
+ - name: Replace mysql-community.repo file to limit to 5.5
+   copy:
+     src=mysql-community.repo
+     dest=/etc/yum.repos.d/
+
+ - name: Install Mysql 5.5
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+     - MySQL-python
+     - mysql-community-server
+   register: mysql_install
+
+ - name: Start and Enable MySQL
+   service:
+     name=mysqld
+     enabled=yes
+     state=started
+
+ - name: Remove 'test' DB if found
+   mysql_db:
+     db=test
+     state=absent
+
+ - name: Set up Zabbix monitoring user
+   mysql_user:
+     name={{ ZABBIX_MYSQL_USER }}
+     password={{ ZABBIX_MYSQL_PASS }}
+     priv="*.*:ALL"
+     login_host=localhost
+     state=present
+
+ - name: Set up Zabbix monitoring user
+   mysql_user:
+     name={{ ZABBIX_MYSQL_USER }}
+     password={{ ZABBIX_MYSQL_PASS }}
+     priv="*.*:ALL"
+     login_host=127.0.0.1
+     state=present
+
+ - name: Create zabbix user dir
+   file:
+     path=/var/lib/zabbix
+     state=directory
+     owner=zabbix
+     group=zabbix
+
+ - name: Write config file with credentials
+   template:
+     src=my.cnf.j2
+     dest=/var/lib/zabbix/.my.cnf
+     owner=zabbix
+     group=zabbix

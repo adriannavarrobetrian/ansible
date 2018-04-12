@@ -1,0 +1,129 @@
+# Role to configure corosync to control a NFS cluster
+#
+# Depends on:
+# - corosync
+---
+ - name: Make store dir
+   file:
+     path=/store
+     state=directory
+
+ - name: Stop and disable services
+   service:
+     name={{ item }}
+     state=stopped
+     enabled=no
+   with_items:
+    - nfs
+    - nfslock
+    - drbd
+
+ - name: Get ENI Facts
+   ec2_eni_facts:
+     region: eu-west-1
+     filters:
+       private-ip-address: "{{ ansible_default_ipv4.address }}"
+   delegate_to: localhost
+   become: no
+   register: eni
+
+ - name: Assign secondary Private IP
+   command: aws ec2 assign-private-ip-addresses --network-interface-id {{ eni.interfaces.0.id }} --private-ip-addresses {{ VIP }}
+   delegate_to: localhost
+   become: no
+   when: "'01' in inventory_hostname"
+
+ - name: Create DNS record for VIP
+   route53 :
+     command: create
+     zone: "{{ ENV }}.{{ ZONE }}"
+     record: "db-vip.{{ ENV }}.{{ ZONE }}"
+     type: A
+     ttl: 60
+     value: "{{ VIP }}"
+     overwrite: yes
+     private_zone: yes
+     retry_interval: 10
+   delegate_to: localhost
+   become: no
+   when: "'01' in inventory_hostname"
+
+ - name: Start corosync 
+   service:
+     name=corosync
+     state=started
+     enabled=yes
+
+ - name: Pause to allow corosync to start
+   pause: 
+     seconds=20
+
+ - name: Make resource dirs
+   file:
+     path={{ item }}
+     state=directory
+   with_items:
+    - "/usr/lib/ocf/resource.d/ec2/"
+    - "/usr/lib/ocf/resource.d/linbit/"
+
+ - name: Upload EC2 VIP script
+   template:
+     src=virtual-ip.j2
+     dest=/usr/lib/ocf/resource.d/ec2/virtual-ip
+     mode=u+x
+
+ - name: Upload linbit drbd config
+   copy:
+     src=drbd
+     dest=/usr/lib/ocf/resource.d/linbit/drbd
+     mode=u+x
+
+ - name: Set Standard settings for corosync
+   shell: "{{ item }}"
+   with_items:
+    - "crm configure property no-quorum-policy=ignore"
+    - "crm configure property stonith-enabled=false"
+    - "crm configure rsc_defaults resource-stickiness=100"
+   when: "'01' in inventory_hostname"
+
+ - name: Set member attributes
+   command: "{{ item }}"
+   with_items:
+    - "crm configure node corosync-01.{{ ENV }}.{{ ZONE }} attributes standby=off"
+    - "crm configure node corosync-02.{{ ENV }}.{{ ZONE }} attributes standby=off"
+   when: "'01' in inventory_hostname"
+
+ - name: Enable required Services
+   command: "{{ item }}"
+   with_items:
+    - "crm configure primitive drbd_store ocf:linbit:drbd params drbd_resource=store op monitor interval=3s role=Master timeout=20s op monitor interval=10s role=Slave timeout=20s op start interval=0 timeout=240s op stop interval=0 timeout=100s"
+    - "crm configure primitive fs_store Filesystem params device=/dev/drbd0 directory=/store fstype=ext4 options=noatime op monitor interval=30s timeout=40s op start interval=0 timeout=60 op stop interval=0 timeout=120"
+    - "crm configure primitive nfs-server nfsserver params nfs_ip={{ VIP }} nfs_shared_infodir=/var/lib/nfs nfs_init_script=/etc/init.d/nfs statd_port=4000 lockd_udp_port=4001 lockd_tcp_port=4001 mountd_port=4002 rquotad_port=4003 statd_outgoing_port=4004 op monitor interval=30s timeout=30s op start interval=0 timeout=120 op stop interval=0 timeout=120 meta target-role=Started"
+    - "crm configure primitive nfslock lsb:nfslock op monitor interval=30s timeout=30s op start interval=0 timeout=120 op stop interval=0 timeout=120"
+    - "crm configure primitive virtual-ip ocf:ec2:virtual-ip op monitor timeout=90 interval=90 on-fail=restart failure-timeout=60s op start timeout=40s interval=0 op stop timeout=60s interval=0 meta is-managed=true resource-stickiness=100 failure-timeout=90 migration-threshold=3 target-role=Started"
+    - "crm configure group crm_nfs fs_store nfs-server nfslock virtual-ip meta target-role=Started"
+    - "crm configure ms ms_drbd_store drbd_store meta master-max=1 master-node-max=1 clone-max=2 clone-node-max=1 notify=true target-role=Started"
+    - "crm configure location drbd-fence-by-handler-store-ms_drbd_store ms_drbd_store rule $role=Master -inf: #uname ne {{ inventory_hostname }}"
+    - "crm configure colocation nfs_on_drbd inf: crm_nfs ms_drbd_store:Master"
+    - "crm configure order fs_after_drbd inf: ms_drbd_store:promote crm_nfs:start"
+   when: "'01' in inventory_hostname"
+
+ - name: Sleep 1 minute to allow storage to come up
+   pause:
+     seconds=60
+ 
+ - name: Create store dir
+   file:
+     path=/store/
+     state=directory
+     recurse=yes
+   register: store_dir
+
+ - name: Restart nfs services
+   service:
+     name={{ item }}
+     state=restarted
+   with_items:
+    - nfs
+    - nfslock
+   when: "'01' in inventory_hostname"

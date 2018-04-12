@@ -1,0 +1,95 @@
+# Role to release the latest powerweb code
+#
+# ### Currently does not not handle any Flyway databas migrations ###
+#
+# Based on this:
+# https://confluence.greenlightpower.net/pages/viewpage.action?spaceKey=POWAWEB&title=PowaWeb+Deployment+Procedure
+#
+ - name: Stop tomcats
+   shell: /root/bin/stoptomcat
+
+ - name: Ensure tomcats have stopped
+   wait_for:
+     delay=2
+     port={{ item }}
+     timeout=120
+     state=stopped
+   with_items:
+    - 8080
+    - 8443
+    - 8009
+    - 8011
+    - 8445
+    - 8082
+    - 8007
+    - 8005
+
+ - name: Backup config
+   command: /root/backup/backup_cfg.sh
+   when: "'01' in inventory_hostname"
+   register: backup_config
+
+ - debug: var=backup_config.stdout_lines
+   when: "'01' in inventory_hostname"
+
+ - name: Backup logs
+   command: /root/backup/backup_logs.sh
+   register: backup_logs
+
+ - debug: var=backup_logs.stdout_lines   
+
+ - name: Clean the current install
+   command: /root/deploy/clean_app.sh
+   when: "'01' in inventory_hostname"
+   register: clean_install
+
+ - debug: var=clean_install.stdout_lines
+   when: "'01' in inventory_hostname"
+
+ - name: Install new build
+   command: /root/deploy/update_app.sh /tmp/powaweb-{{ BRANCH }}-{{ VERSION }}.tgz
+   when: "'01' in inventory_hostname"
+   register: install_build
+ 
+ - debug: var=install_build.stdout_lines
+   when: "'01' in inventory_hostname"
+
+ - name: Untar backups
+   command: /root/deploy/untar_backups.sh
+   when: "'01' in inventory_hostname"
+   register: untar_backups
+
+ - debug: var=untar_backups.stdout_lines
+   when: "'01' in inventory_hostname"
+
+ - name: Configure application
+   shell: /root/deploy/configure_{{ ENV }}.sh
+   when: "'01' in inventory_hostname"
+   register: config_app
+
+ - debug: var=config_app.stdout_lines
+   when: "'01' in inventory_hostname"
+
+ - name: Set perms
+   command: /root/deploy/set_perms.sh
+   when: "'01' in inventory_hostname"
+   register: set_perms
+
+ - debug: var=set_perms.stdout_lines
+   when: "'01' in inventory_hostname"
+
+ - name: Clean up build file
+   file:
+     path=/tmp/powaweb-{{ BRANCH }}-{{ VERSION }}.tgz
+     state=absent
+   when: "'01' in inventory_hostname"
+
+ - name: Set date
+   shell: date +%Y%m%d01
+   register: date
+
+ - name: Clean up build dir
+   file:
+     path=/root/deploy/{{ date }}
+     state=absent
+   when: "'01' in inventory_hostname"

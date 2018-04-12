@@ -1,0 +1,14 @@
+---
+ - name: deploy powerweb application
+   hosts: nfs-test
+   become: yes
+   vars: 
+     powerweb_version: 4.37.0-SNAPSHOT
+     powerweb_tar_version: 20160427-96dee1a-4.37.0-SNAPSHOT
+   roles:
+   - deploy-powerweb-app
+   tasks:
+   - name: show variables
+     debug: msg="Environment {{ ENV }} Database {{ DB_HOST }}  ActiveMQ {{ MQ_HOST }}"
+
+ 

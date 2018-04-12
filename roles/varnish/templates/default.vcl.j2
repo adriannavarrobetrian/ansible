@@ -1,0 +1,63 @@
+vcl 4.0;
+
+import directors;
+import std;
+
+{% set group = "web-" ~ ENV %}
+{% for host in groups[group] %}
+backend web0{{ loop.index }} {
+    .host = "{{ hostvars[host]['inventory_hostname'] }}";
+    .port = "80";
+}
+{% endfor %}
+
+sub vcl_init {
+    new bar = directors.round_robin();
+{% set group = "web-" ~ ENV %}
+{% for host in groups[group] %}
+    bar.add_backend(web0{{ loop.index }});
+{% endfor %}
+}
+
+sub vcl_recv {
+    if (req.http.host == "admin.test.gplshops.com"      ||
+        req.http.host == "api.test.gplshops.com"        ||
+        req.url ~ "/checkout(.*)"                       ||
+        req.url ~ "/cart(.*)") {
+        return (pass);
+    }
+
+    set req.backend_hint = bar.backend();
+    set req.ttl = std.duration(req.http.X-Cache-TTL, 86400s);
+    set req.http.X-Cache-TTL-Requested = req.ttl;
+    return (hash);
+}
+
+sub vcl_backend_response {
+    set beresp.keep = std.duration(bereq.http.X-Cache-TTL, 86400s);
+    set beresp.ttl = beresp.keep;
+    return (deliver);
+}
+
+sub vcl_deliver {
+    unset resp.http.Via;
+    unset resp.http.X-Varnish;
+
+    # Various headers set earlier for debugging purposes.
+    if (req.http.X-Cache-Keep) {
+      set resp.http.X-Cache-Keep = req.http.X-Cache-Keep;
+    }
+    if (req.http.X-Cache-TTL-Remaining) {
+      set resp.http.X-Cache-TTL-Remaining = req.http.X-Cache-TTL-Remaining;
+    }
+    if (req.http.X-Cache-Age) {
+      set resp.http.X-Cache-Age = req.http.X-Cache-Age;
+    }
+    if (req.http.X-Cache-TTL-Requested) {
+      set resp.http.X-Cache-TTL-Requested = req.http.X-Cache-TTL-Requested;
+    }
+    if (req.http.X-Cache-Result) {
+      set resp.http.X-CacheResult = req.http.X-Cache-Result;
+    }
+
+}

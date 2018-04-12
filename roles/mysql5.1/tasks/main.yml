@@ -1,0 +1,48 @@
+---
+ - name: Install MySQL and required libs
+   yum: 
+     name={{ item }} 
+     state=present
+   with_items:
+     - mysql-server
+     - MySQL-python
+     - libselinux-python
+
+ - name: Start MySQL
+   service:
+     name=mysqld
+     state=started
+
+ - name: Set up Zabbix monitoring user
+   mysql_user:
+     name={{ ZABBIX_MYSQL_USER }}
+     password={{ ZABBIX_MYSQL_PASS }}
+     priv="*.*:ALL"
+     login_host=localhost
+     state=present
+
+ - name: Set up Zabbix monitoring user
+   mysql_user:
+     name={{ ZABBIX_MYSQL_USER }}
+     password={{ ZABBIX_MYSQL_PASS }}
+     priv="*.*:ALL"
+     login_host=127.0.0.1
+     state=present
+
+ - name: Create zabbix user dir
+   file:
+     path=/var/lib/zabbix
+     state=directory
+     owner=zabbix
+     group=zabbix
+   tags:
+    - monitoring
+
+ - name: Write config file with credentials
+   template:
+     src=my.cnf.j2
+     dest=/var/lib/zabbix/.my.cnf
+     owner=zabbix
+     group=zabbix
+   tags:
+    - monitoring

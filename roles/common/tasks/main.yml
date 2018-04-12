@@ -1,0 +1,22 @@
+# Common things to apply on build
+#
+#
+---
+## Sets the bash colours
+
+- name: Upload new bashrc
+  copy:
+    src=bashrc
+    dest=/etc/bashrc
+
+- name: Start ntp
+  service:
+    name=ntpd
+    state=started
+    enabled=yes
+
+- name: Remove centos user
+  user:
+    name=centos
+    state=absent
+    remove=yes 

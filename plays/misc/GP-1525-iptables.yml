@@ -1,0 +1,23 @@
+# Playbook to add iptables rule for GP-1525
+#
+ - name: Add lines to iptables to allow ICMP
+   hosts: prod-core
+   gather_facts: False
+   become: yes
+   tasks:
+    - name: Add inbound ICMP rule
+      lineinfile:
+        dest=/etc/sysconfig/iptables
+        insertafter="-A INPUT -s 172.20.0.0/16 -p icmp -m state --state NEW -j ACCEPT"
+        line="-A INPUT -s 172.18.2.0/24 -p icmp -m state --state NEW -j ACCEPT"
+        state=present
+
+    - name: Add outbound ICMP rule
+      lineinfile:
+        dest=/etc/sysconfig/iptables
+        insertafter="-A OUTPUT -d 172.20.0.0/16 -p icmp -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT"
+        line="-A OUTPUT -d 172.18.2.0/24 -p icmp -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT"
+        state=present
+
+    - name: Reload iptables
+      shell: iptables-restore < /etc/sysconfig/iptables

@@ -1,0 +1,18 @@
+# Playbook to launch test mysql server for rlukosevicius
+---
+ - name: Launch Instance
+   hosts: mysql-rich.test.glp 
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Set up MySQL
+   hosts: mysql-rich.test.glp
+   vars:
+     ssh_users:
+      - "rlukosevicius"
+   become: yes
+   roles:
+    - ssh-users
+    - mysql5.5
+    - zabbix-agent-start

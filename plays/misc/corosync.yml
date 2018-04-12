@@ -1,0 +1,23 @@
+# Playbook to launch test corosync servers
+---
+ - name: Launch Instance
+   hosts: corosync-sb 
+   connection: local
+   roles:
+    - ec2-instance
+
+ - name: Get EC2 Facts
+   hosts: corosync-sb
+   gather_facts: false 
+   tasks:
+    - name: Get EC2 Facts for hosts
+      action: ec2_facts
+
+ - name: Set up Corosync
+   hosts: corosync-sb
+   become: yes
+   roles:
+    - ec2-api-tools
+    - squid-gw
+    - corosync
+    - corosync-gw

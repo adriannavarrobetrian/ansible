@@ -1,0 +1,221 @@
+# Role to install RatticDB on CentOS 
+---
+ - name: Delete lost+found directory
+   file:
+     dest=/var/lib/mysql/lost+found
+     state=absent
+   notify:
+    - Restart MySQL
+
+ - name: create rattic deatabase
+   mysql_db:
+     db=rattic
+     state=present
+
+ - name: Ensure no database 'test' exists and delete if found.
+   mysql_db: 
+     db=test
+     state=absent
+
+ - name: Install 'Development tools' package group
+   yum: 
+     name="@Development tools" 
+     state=present
+
+ - name: Install 'Web Server' package group
+   yum:
+     name="@Web Server"
+     state=present
+
+ - name: Install required packages
+   yum:
+     name={{ item }}
+     state=present 
+   with_items:
+     - openldap-devel
+     - bzip2-devel 
+     - sqlite-devel 
+     - libxml2-devel 
+     - libxslt-devel 
+     - wget 
+     - openssl-devel 
+     - tk-devel
+     - sqlite-devel 
+     - libxml2-devel 
+     - libxslt-devel 
+     - wget 
+     - openssl-devel
+     - httpd-devel 
+     - python-devel     
+     - httpd
+     - mod_ssl
+     - python-pip
+     - mod_wsgi
+     - ncurses-devel
+     - readline-devel
+     - mysql-devel
+     - ntp
+   notify:
+    - Restart MySQL 
+
+ - name: Start ntpd service
+   service:
+     name=ntpd
+     state=started
+
+ - name: Adding 'rattic' user 
+   user: 
+     name=rattic
+     comment="RatticWeb"
+
+ - name: Get RatticWeb
+   get_url:
+     url="https://github.com/tildaslash/RatticWeb/archive/v{{ ratticweb_version }}.tar.gz"
+     dest="/tmp/"
+   register: new_archive
+ 
+ - name: create RatticWeb directory if it doesn't exist
+   file: 
+     path=/opt/apps/
+     state=directory 
+
+ - name: Unarchive RatticWeb source
+   unarchive:
+     src="/tmp/RatticWeb-{{ ratticweb_version }}.tar.gz"
+     dest="/tmp/"
+     copy=no
+   when: new_archive|changed
+   register: rattic_tar
+
+ - name: Move /tmp/RatticWeb-{{ ratticweb_version }} to /opt/apps/RatticWeb
+   command: mv /tmp/RatticWeb-{{ ratticweb_version }} /opt/apps/RatticWeb
+   when: rattic_tar.changed
+
+ - name: Change group and owner as 'rattic' for /opt/apps/RatticWeb
+   file:
+     path=/opt/apps/RatticWeb
+     owner=rattic
+     group=rattic
+     recurse=yes
+
+ - name: create static directory under Ratticweb if it doesn't exist
+   file:
+     path=/opt/apps/RatticWeb/static
+     state=directory
+     owner=rattic
+     group=rattic
+     recurse=yes
+
+ - name: install the python modules for RatticWeb
+   pip:
+     requirements=/opt/apps/RatticWeb/requirements-mysql.txt
+   notify:
+     - Restart MySQL
+
+ - name: Upload local config file for RatticWeb
+   template:
+     src=local.j2
+     dest=/opt/apps/RatticWeb/conf/local.cfg
+     owner=rattic
+     group=rattic
+     mode=0664
+
+ - name: Upload httpd config file for web server
+   template:
+     src=rattic.j2
+     dest=/etc/httpd/conf.d/rattic.conf
+   notify:
+     - Restart httpd service 
+
+ - name: Create ssl config dirs
+   file:
+     path=/etc/httpd/conf.d/ssl/{{ item }}
+     state=directory
+     recurse=yes
+   with_items:
+    - key
+    - ca
+    - cert
+
+ - name: Upload site ssl certs
+   copy:
+     content="{{ item.value }}"
+     dest="/etc/httpd/conf.d/ssl/{{ item.key }}/greenlightpower.{{ item.key }}"
+     mode=640
+   with_dict:
+     "{{ SSL_DICT }}"
+
+ - name: Patch bug related to pycrypto
+   lineinfile: 
+     dest=/usr/lib64/python2.6/site-packages/Crypto/Util/number.py
+     regexp="{{item.regexp}}" 
+     line="{{item.line}}"
+   with_items:
+     - { regexp: "HAVE_DECL_MPZ_POWM_SEC", line: "#if _fastmath is not None and not _fastmath.HAVE_DECL_MPZ_POWM_SEC:" }
+     - { regexp: "PowmInsecureWarning", line: "# _warn('Not using mpz_powm_sec. You should rebuild using libgmp >= 5 to avoid timing attack vulnerability.', PowmInsecureWarning)" }
+
+ - name: Updating timezone in /opt/apps/RatticWeb/conf/defaults.cfg
+   lineinfile:
+     dest=/opt/apps/RatticWeb/conf/defaults.cfg
+     regexp="{{item.regexp}}"
+     line="{{item.line}}"
+   with_items:
+     - { regexp: "timezone = Australia/Melbourne", line: "timezone = Europe/London" }
+   notify:
+     - Restart MySQL
+     - Restart httpd service
+
+ - name: Creating rattic user for MySQL
+   mysql_user: 
+     name={{ mysql_user }} 
+     password={{ mysql_user_pass }}
+     priv=*.*:ALL 
+     state=present
+
+# below are the patch for python 2.6
+ - name: Remove /usr/lib/python2.6/site-packages/kombu/transport/django/migrations/
+   file: 
+     dest=/usr/lib/python2.6/site-packages/kombu/transport/django/migrations/
+     state=absent
+
+ - name: Remove /usr/lib/python2.6/site-packages/djcelery/migrations/
+   file: 
+     dest=/usr/lib/python2.6/site-packages/djcelery/migrations/
+     state=absent
+
+ - name: Create user in order to login Ratticweb
+   lineinfile:
+     dest=/opt/apps/RatticWeb/account/management/commands/demosetup.py
+     regexp="{{item.regexp}}"
+     line="{{item.line}}"
+   with_items:
+     - { regexp: "User.objects.get", line: "          u = User.objects.get(username='{{ ratticwebUsername }}')" }
+     - { regexp: "email", line: "          u = User(username='{{ ratticwebUsername }}', email='{{ ratticwebEmail }}')" }
+     - { regexp: "set_password", line: "        u.set_password('{{ ratticwebPass }}')" }
+
+ - name: Sync DB - RatticWeb
+   shell: cd /opt/apps/RatticWeb/ && ./manage.py syncdb --noinput 
+
+ - name: Migratimg database - RatticWeb
+   shell: cd /opt/apps/RatticWeb/ && ./manage.py migrate --all
+
+ - name: Building language file - RatticWeb
+   shell: cd /opt/apps/RatticWeb/ && ./manage.py compilemessages
+
+ - name: Copy static file to /opt/apps/RatticWeb/static dir  - RatticWeb
+   shell: cd /opt/apps/RatticWeb/ && ./manage.py collectstatic -c --noinput
+
+ - name: Create an initial/default user account (Username '{{ ratticwebUsername }}' Password '{{ ratticwebPass }}') - RatticWeb
+   shell: cd /opt/apps/RatticWeb/ && ./manage.py demosetup
+
+ - name: Add Modsecurity rule for crs 30
+   lineinfile:
+     dest=/etc/httpd/conf.d/mod_security.conf
+     insertafter="Include modsecurity.d/activated_rules/\*.conf"
+     line="        Include modsecurity.d/modsecurity-whitelist.conf"
+     
+ - name: Upload mod_sec whitelist
+   copy:
+     src=modsecurity-whitelist.conf
+     dest=/etc/httpd/modsecurity.d/
+

@@ -1,0 +1,7 @@
+# Playbook to set yum repo
+---
+ - name: Change repo
+   hosts: vpc_id_vpc_a2719cc6
+   become: yes
+   roles:
+    - glp-repo

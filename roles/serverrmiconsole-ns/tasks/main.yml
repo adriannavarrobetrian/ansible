@@ -1,0 +1,65 @@
+# Role to install serverrmiconsole for nameservers
+
+---
+ - name: install Server RMI Console (DNS / HAProxy)
+   yum: 
+     name=dns-serverrmiconsole 
+     state=latest
+
+ - name: Set ownership of dirs to rmiuser
+   file:
+     path=/usr/local/serverrmiconsole
+     owner=rmiuser
+     group=named
+     recurse=yes
+
+ - name: Create directories
+   file:
+     path={{ item }}
+     owner=rmiuser
+     group=named 
+     state=directory
+     mode=775
+   with_items:
+     - "/var/named/zone"
+     - "/backup/config/etc/named"
+     - "/backup/config/var/named/"
+
+ - name: Change ownerships of zone files
+   file:
+     path={{ item }}
+     owner=rmiuser
+     group=named
+   with_items:
+     - "/etc/named/zones_dynamic.conf"
+
+ - name: Adjust startconsole.sh
+   template:
+     src=startconsole.sh.j2
+     dest=/usr/local/serverrmiconsole/bin/startconsole.sh
+     owner=rmiuser
+     group=named
+
+ - name: Upload custom server.xml
+   template:
+     src=server.xml.j2
+     dest=/usr/local/serverrmiconsole/conf/server.xml
+     owner=rmiuser
+     group=named
+
+# This should really be changed in the rpm
+ - name: Change rmiuser shell to bash
+   user:
+     name=rmiuser
+     shell=/bin/bash
+
+ - name: Allow rmiuser to reload named
+   lineinfile:
+     dest=/etc/sudoers
+     line="rmiuser ALL=NOPASSWD{{ ":" }}   /etc/init.d/named reload"
+
+ - name: Start and enable serverrmiconsole
+   service:
+     name=serverrmiconsole
+     state=started
+     enabled=yes

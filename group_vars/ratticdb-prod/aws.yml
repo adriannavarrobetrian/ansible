@@ -1,0 +1,29 @@
+COUNT: 1
+SEC_GROUP: 
+ - sg-1afc807d
+ - sg-b1ea96d6 
+AMI: non-secure 
+TYPE: t2.small 
+BUILD_KEY: buildscm.pem
+VPC_SUBNET: subnet-1a0c3d73
+TAGS: {Class: "ratticdb", Name: "{{ inventory_hostname }}", Env: "{{ ENV }}"}
+ENV: prod
+ZONE: glp
+PUBLIC_IP: no
+ELIP: yes
+PRIV_IP: no 
+IAM_ROLE: s3_readonly_role 
+EC2_VOLUME_SIZE: 8 
+EC2_VOLUME_SIZE_ENCRYPTED: 10
+VOLUMES:
+ - device_name: /dev/sda1
+   volume_size: "{{ EC2_VOLUME_SIZE }}"
+   delete_on_termination: false 
+ - device_name: /dev/sdb
+   volume_size: "{{ EC2_VOLUME_SIZE_ENCRYPTED }}"
+   delete_on_termination: false
+   encrypted: true
+aws_mounts:
+  - source: /dev/xvdb
+    destination: /var/lib/mysql
+    fstype: ext4 

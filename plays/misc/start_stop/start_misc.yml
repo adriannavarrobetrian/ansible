@@ -1,0 +1,11 @@
+---
+ - name: Start Florin Test Servers
+   connection: local
+   gather_facts: false
+   hosts: florin-test.test.glp
+   vars:
+     ports:
+      - 22
+     group: florin-test
+   roles:
+    - server-start

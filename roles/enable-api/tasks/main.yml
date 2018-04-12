@@ -1,0 +1,8 @@
+ - name: Enable API
+   command: mysql --disable-column-names -B -e "UPDATE api.web_application_settings SET bool_value=0 WHERE setting='shutting_down';"
+   register: enable
+   when: processing.stdout == "0"
+
+ - name: Fail if API enable not ok
+   fail: msg="Task to ENABLE API did not succeed, please check"
+   when: processing.rc != 0

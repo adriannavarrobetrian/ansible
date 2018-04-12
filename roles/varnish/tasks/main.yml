@@ -1,0 +1,74 @@
+# Role to install Varnish for http caching
+#
+#
+---
+ - name: Upload RPM keys
+   copy:
+     src={{ item }}
+     dest=/etc/pki/rpm-gpg/{{ item }}
+   with_items:
+    - RPM-GPG-KEY-VARNISH
+    - RPM-GPG-KEY-VARNISH-SOFTWARE
+
+ - name: Upload Varnish RPM config
+   copy:
+     src=varnish.repo
+     dest=/etc/yum.repos.d/
+     
+ - name: Install Varnish
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+    - varnish
+    - zabbix-sender
+
+ - name: Configure Varnish Runtime Options
+   template:
+     src=varnish.j2
+     dest=/etc/sysconfig/varnish
+
+ - name: Upload default.vcl to define caching
+   copy:
+     src=default.vcl
+     dest=/etc/varnish/default.vcl
+
+ - name: Start and enable services
+   service:
+     name={{ item }}
+     state=started
+     enabled=yes
+   with_items:
+    - varnish
+    - varnishncsa
+
+ - name: Upload monitoring scripts
+   copy:
+    src=zabbix-varnish-cache.py
+    dest=/usr/local/bin
+    owner=zabbix
+    group=zabbix
+    mode=u+x
+
+ - name: Edit zabbix user to be in varnish group (additional group)
+   user:
+     name=zabbix
+     groups=varnish
+
+ - name: Create cron job to send stats in
+   cron:
+     name: "Cron to send Varnish stats to Zabbix"
+     job: "/usr/local/bin/zabbix-varnish-cache.py -i '' send -c /etc/zabbix/zabbix_agentd.conf -s `hostname` > /dev/null 2>&1"
+
+ - name: Add net.ipv4.tcp_fin_timeout sysctl param to help Zabbix data
+   sysctl:
+     name=net.ipv4.tcp_fin_timeout
+     value=30
+     state=present
+
+ - name: Upload zabbix params file
+   copy:
+     src=userparameter_varnish.conf
+     dest=/etc/zabbix/zabbix_agentd.d/userparameter_varnish.conf
+     owner=zabbix
+     group=zabbix

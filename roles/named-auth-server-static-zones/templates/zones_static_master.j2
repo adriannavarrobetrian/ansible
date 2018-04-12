@@ -1,0 +1,7 @@
+{% for item in dns_zones %}
+zone "{{ item }}" {
+       type master;
+       file "/var/named/static/{{ item }}";
+       allow-update {none;};
+};
+{% endfor %}

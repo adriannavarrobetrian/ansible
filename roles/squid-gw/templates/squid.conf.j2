@@ -1,0 +1,65 @@
+# POWAAIM SERVER LIST AND ACLS
+#acl powaaim_app src "/etc/squid/srv/powaaim_app.list"
+#acl powaaim_app_regex_acl url_regex "/etc/squid/acl/powaaim_app_regex.acl"
+
+# POWATAG SERVER LIST AND ACLS
+#acl powatag_app src "/etc/squid/srv/powatag_app.list"
+#acl powatag_app_regex_acl url_regex "/etc/squid/acl/powatag_app_regex.acl"
+
+# POWAWEB SERVER LIST AND ACLS
+acl powaweb_app src "/etc/squid/srv/powaweb_app.list"
+acl powaweb_app_regex_acl url_regex "/etc/squid/acl/powaweb_app_regex.acl"
+acl powaweb_app_ip_acl_http dst "/etc/squid/acl/powaweb_app_dst_ip_http.acl"
+acl powaweb_app_ip_acl_https dst "/etc/squid/acl/powaweb_app_dst_ip_https.acl"
+
+# ACL WHICH DEFINES WHICH PORTS SQUID IS ALLOWED TO FORWARD TO. SQUID SHOULD *ONLY* BE RESPONSIBLE FOR HTTP(S) TRAFFIC
+acl allowed_ports port 80          # http
+acl allowed_ports port 443         # https
+
+# MAPPING OF PORT NUMBERS TO AN ACL NAME
+acl http port 80
+acl https port 443
+
+acl CONNECT method CONNECT
+
+tcp_outgoing_address {{ eni.network_interfaces.0.private_ip_addresses.1.private_ip_address }}
+visible_hostname {{ inventory_hostname }}
+
+http_access deny !allowed_ports
+http_access deny CONNECT !https
+http_access deny CONNECT all
+http_access deny manager
+
+# ALLOWS CONNECTIONS BASED ON DESTINATION REGEX (PROTOCOL INCLUDED)
+#http_access allow powaaim_app powaaim_app_regex_acl
+#http_access allow powatag_app powatag_app_regex_acl
+http_access allow powaweb_app powaweb_app_regex_acl
+# ALLOWS CONNECTIONS BASED ON DESTINATION IP/SUBNET_MASK PAIR *AND* DESTINATION PORT
+http_access allow powaweb_app powaweb_app_ip_acl_http http
+http_access allow powaweb_app powaweb_app_ip_acl_https https
+# DENY REST
+http_access deny all
+
+# SSL BUMP CONFIGURATION
+#always_direct allow powaaim_app
+#always_direct allow powatag_app
+always_direct allow powaweb_app
+cache deny all
+
+# INITIATE TLS FROM THE PROXY TO DESTINATION FIRST, ONLY THEN BACK TO THE SERVER INSIDE THE VOC
+ssl_bump server-first all
+# DO NOT ACCEPT TRAFFIC WHICH FAILED TLS NEGOTIATION
+sslproxy_cert_error deny all
+sslproxy_flags DONT_VERIFY_PEER
+sslcrtd_program /usr/lib64/squid/ssl_crtd -s /var/spool/squid/ssldb -M 64MB
+sslcrtd_children 5
+http_port 3127
+http_port 3129 intercept
+https_port 3128 intercept ssl-bump generate-host-certificates=on dynamic_cert_mem_cache_size=64MB key=/etc/squid/ssl/squid.key cert=/etc/squid/ssl/squid.crt
+request_header_access X-Forwarded-For deny all
+
+coredump_dir /var/spool/squid
+refresh_pattern ^ftp:           1440    20%     10080
+refresh_pattern ^gopher:        1440    0%      1440
+refresh_pattern -i (/cgi-bin/|\?) 0     0%      0
+refresh_pattern .               0       20%     4320

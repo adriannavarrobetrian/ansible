@@ -1,0 +1,10 @@
+# Task to clean revoked users from Servers (departed admins etc)
+#
+---
+ - name: Remove revoked users
+   user:
+     name={{ item }}
+     state=absent
+     remove=yes
+   with_items:
+    - "{{ REVOKED_USERS }}"

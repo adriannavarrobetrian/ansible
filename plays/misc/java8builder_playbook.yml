@@ -1,0 +1,57 @@
+---
+- hosts: java8 
+  remote_user: ec2-user
+  vars:
+    - java_download_url: http://download.oracle.com/otn-pub/java/jdk/8u73-b02/jdk-8u73-linux-x64.rpm
+#    - java_download_url: http://download.oracle.com/otn/java/jdk/7u71-b14/jdk-7u71-linux-x64.rpm
+    - download_dir: /tmp
+#    - java_package: "{{download_dir}}/jdk-7u71-linux-x64.rpm"
+    - java_package: "{{download_dir}}/jdk-8u73-linux-x64.rpm"
+  tasks:
+    - name: install packages 
+      yum: name=wget,git state=latest
+      sudo: True
+
+    - name: download java
+      command: "wget -q -O {{java_package}} --no-check-certificate --no-cookies --header 'Cookie: oraclelicense=accept-securebackup-cookie' {{java_download_url}} creates={{java_package}}"
+      sudo: True
+
+    - name: install Oracle JDK
+      yum: name="{{java_package}}" state=present
+      sudo: True
+
+    - name: create group
+      group: name=builder state=present
+      sudo: True
+
+    - name: create build user
+      user: name=builder shell=/bin/bash group=builder state=present
+      sudo: True
+
+    - name: setup authorized_keys for builder
+      authorized_key: user=builder key="{{ lookup('file','/etc/ansible/builder_rsa.pub')}}"
+      sudo: True
+
+    - name: create build directory
+      file: path=/build state=directory owner=builder group=builder
+      sudo: True
+
+    - name: download maven
+      get_url: url=http://apache.mirror.anlx.net/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz dest=/tmp/apache-maven-3.3.9-bin.tar.gz
+      sudo: True
+
+    - name: unpack maven
+      unarchive: "copy=no src=/tmp/apache-maven-3.3.9-bin.tar.gz dest=/opt creates=/opt/apache-maven-3.3.9"
+      sudo: True
+
+    - name: create maven symlink
+      file: src=/opt/apache-maven-3.3.9 dest=/opt/maven state=link
+      sudo: True
+
+    - name: add maven to path
+      command: alternatives --install /usr/bin/mvn mvn /opt/apache-maven-3.3.9/bin/mvn 1
+      sudo: True
+
+    - name: copy maven settings.xml
+      copy: src=/etc/ansible/settings.xml dest=/opt/apache-maven-3.3.9/conf/settings.xml
+      sudo: True

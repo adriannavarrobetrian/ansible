@@ -1,0 +1,37 @@
+# Role to stop a collection of servers in a group
+#
+# The instance ID is written to /tmp/{{ group_name }}/{{ inventory_hostname}}.server to be used to start up 
+#
+# Designed to be used during an overnight/weekend shutdown
+---
+ - name: Get EC2 Facts
+   action: ec2_facts   
+
+ - name: Stop Server
+   ec2:
+     instance_ids={{ ansible_ec2_instance_id }}
+     state=stopped
+     region="eu-west-1"
+     aws_access_key="{{ AWS_KEY }}"
+     aws_secret_key="{{ AWS_SECRET }}"
+   delegate_to: localhost
+
+ - name: Wait for Servers to stop
+   wait_for:
+     port={{ item }}
+     host={{ inventory_hostname }}
+     delay=5
+     timeout=600
+     state=stopped
+   delegate_to: localhost
+   with_items:
+    - "{{ ports }}"
+
+ - name: Create tmp dir if not already there
+   file:
+     path=/tmp/.{{ group }}/
+     state=directory
+   delegate_to: localhost
+ 
+ - name: Write Instance ID to file
+   local_action: copy content={{ ansible_ec2_instance_id }} dest=/tmp/.{{ group }}/{{ inventory_hostname }}.server

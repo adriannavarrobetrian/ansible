@@ -1,0 +1,10 @@
+rmi.server.port=2007
+rmi.server.bind.ip={{ ansible_default_ipv4.address }}
+
+ssl.config.dir=/etc/stunnel/conf.d
+ssl.cert.dir=/etc/stunnel/cert.d
+
+ssl.backup.config.dir=/backup/stunnel/conf.d/
+ssl.backup.cert.dir=/backup/stunnel/cert.d/
+
+ssl.offloader.reload=/usr/bin/sudo /etc/init.d/stunnel reload

@@ -1,0 +1,8 @@
+# Handlers for zabbix-agent role
+#
+#
+---
+ - name: Restart zabbix-agent
+   service:
+     name=zabbix-agent
+     state=restarted

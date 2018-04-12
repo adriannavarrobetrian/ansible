@@ -1,0 +1,10 @@
+# This role is used to start Zabbix post configuration
+#
+# This should be added to the end of the play
+#
+---
+ - name: Start and enable zabbix-agent
+   service:
+     name=zabbix-agent
+     state=restarted
+     enabled=yes

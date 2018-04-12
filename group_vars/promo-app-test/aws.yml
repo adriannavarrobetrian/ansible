@@ -1,0 +1,21 @@
+COUNT: 1
+SEC_GROUP: 
+ - sg-5d82303a
+ - sg-cb88caac
+AMI: non-secure 
+TYPE: t2.small
+BUILD_KEY: buildscm.pem
+VPC_SUBNET: subnet-808127e4 
+TAGS: {Class: "test-promotions-app", Name: "{{ inventory_hostname }}", Env: "{{ ENV }}"}
+ENV: test
+ZONE: glp
+PUBLIC_IP: no
+PRIV_IP: no
+IAM_ROLE: s3_readonly_role
+EC2_VOLUME_SIZE: 8
+VOLUMES:
+ - device_name: /dev/sda1
+   volume_size: "{{ EC2_VOLUME_SIZE }}"
+   delete_on_termination: true
+PROJECT: promo
+ 

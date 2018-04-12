@@ -1,0 +1,7 @@
+[powa]
+name=CentOS-$releasever - Powa
+baseurl=http://repo.powa.pci/centos/$releasever/powa/$basearch/
+gpgcheck=1
+gpgkey=http://repo.powa.pci/centos/RPM-GPG-KEY-Powa
+priority=1
+protect=1

@@ -1,0 +1,57 @@
+# VPC Creation
+#
+#
+---
+ - name: Create VPC
+   hosts: localhost
+   gather_facts: False
+   connection: local
+   vars:
+     ENV: sb
+     REGION: eu-west-1
+     BLOCK: 19
+     CIDR: "172.{{ BLOCK }}.0.0/16"
+     ADMIN_VPC_ID: vpc-a2719cc6
+     SUBNETS:
+       app-euw1a:
+         cidr: "172.{{ BLOCK }}.14.0/24"
+         az: eu-west-1a
+         tags: { "Env": "{{ ENV }}", "Facing" : "Private", "Tier" : "App", "Name": "{{ ENV }}-app-euw1a" }
+       app-euw1b:
+         cidr: "172.{{ BLOCK }}.24.0/24"
+         az: eu-west-1b
+         tags: { "Env": "{{ ENV }}", "Facing" : "Private", "Tier" : "App", "Name": "{{ ENV }}-app-euw1a" }
+       aux-euw1a:
+         cidr: "172.{{ BLOCK }}.10.0/24"
+         az: eu-west-1a
+         tags: { "Env": "{{ ENV }}", "Facing" : "Private", "Tier" : "Aux", "Name": "{{ ENV }}-aux-euw1a" }
+       aux-euw1b:
+         cidr: "172.{{ BLOCK }}.20.0/24"
+         az: eu-west-1b
+         tags: { "Env": "{{ ENV }}", "Facing" : "Private", "Tier" : "Aux", "Name": "{{ ENV }}-aux-euw1b" }
+       dmz-lb-euw1a:
+         cidr: "172.{{ BLOCK }}.11.16/28"
+         az: eu-west-1a
+         tags: { "Env": "{{ ENV }}", "Facing" : "Public", "Tier" : "DMZ-LB", "Name": "{{ ENV }}-dmz-lb-euw1a" }
+       dmz-lb-euw1b:	
+         cidr: "172.{{ BLOCK }}.21.16/28"
+         az: eu-west-1b
+         tags: { "Env": "{{ ENV }}", "Facing" : "Public", "Tier" : "DMZ-LB", "Name": "{{ ENV }}-dmz-lb-euw1b" }
+       dmz-gateway-euw1a:
+         cidr: "172.{{ BLOCK }}.1.16/28"
+         az: eu-west-1a
+         tags: { "Env": "{{ ENV }}", "Facing" : "Public", "Tier" : "DMZ-Gateway", "Name": "{{ ENV }}-dmz-gateway-euw1a" }
+       dmz-gateway-euw1b:
+         cidr: "172.{{ BLOCK }}.2.16/28"
+         az: eu-west-1b
+         tags: { "Env": "{{ ENV }}", "Facing" : "Public", "Tier" : "DMZ-Gateway", "Name": "{{ ENV }}-dmz-gateway-euw1b" }
+       dmz-services-euw1a:
+         cidr: "172.{{ BLOCK }}.1.32/27"
+         az: eu-west-1a
+         tags: { "Env": "{{ ENV }}", "Facing" : "Public", "Tier" : "DMZ-Services", "Name": "{{ ENV }}-dmz-services-euw1a" }
+       nat-subnet-euw1a:
+         cidr: "172.{{ BLOCK }}.99.0/28"
+         az: eu-west-1a
+         tags: { "Env": "{{ ENV }}", "Facing" : "Public", "Tier" : "NAT", "Name": "{{ ENV }}-NAT-euw1a" }
+   roles:
+    - ec2-vpc

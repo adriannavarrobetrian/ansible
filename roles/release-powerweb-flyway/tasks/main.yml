@@ -1,0 +1,60 @@
+---
+ - name: Set date
+   shell: date +%Y%m%d01
+   register: date
+
+ - name: Fetch dir
+   synchronize:
+     src="/root/deploy/{{ date.stdout }}/db"
+     dest=/tmp/
+     mode=pull
+
+ - name: Set DB Host - pre-prod   
+   set_fact:
+     db_host=mysql-01.{{ ENV }}.glp
+   when: ENV != "prod"
+
+ - name: Set DB Host - prod
+   set_fact:
+     db_host=secure-euw1a-powaweb-prod-mysql-1.powa.pci
+   when: ENV == "prod"
+ 
+ - name: Upload dir
+   copy:
+     src=/tmp/db
+     dest=/tmp/
+   delegate_to: "{{ db_host }}"
+
+ - name: Create /tmp/db/engine/
+   file:
+     path=/tmp/db/engine/
+     state=directory
+   delegate_to: "{{ db_host }}"
+
+ - name: Sync cms to engine
+   shell: cp /tmp/db/cms/* /tmp/db/engine/
+   delegate_to: "{{ db_host }}"
+
+ - name: Run Flyway
+   command: /root/flyway/apply migrate
+   register: flyway
+   delegate_to: "{{ db_host }}"
+
+ - debug: var=flyway.stdout_lines
+   delegate_to: "{{ db_host }}"
+    
+ - name: Clean local dir
+   file: 
+     path=/tmp/db/
+     state=absent
+   delegate_to: localhost
+
+ - name: Clean remote directory
+   file: 
+     path=/tmp/db/
+     state=absent
+   delegate_to: "{{ db_host }}"
+
+ - name: Remove Locks
+   command: /root/bin/remove_locks.sh
+   delegate_to: "{{ db_host }}" 

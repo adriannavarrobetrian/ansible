@@ -1,0 +1,35 @@
+# Role to install Jenkins. Will install the latest version
+#
+# Relies on having Apache installed using the apache role
+#
+---
+ - name: Fetch Jenkins repo details
+   get_url:
+     url=http://pkg.jenkins-ci.org/redhat-stable/jenkins.repo
+     dest=/etc/yum.repos.d/jenkins.repo
+
+ - name: Install Jenkins repo key
+   rpm_key:
+     key=http://pkg.jenkins-ci.org/redhat/jenkins-ci.org.key
+     state=present 
+
+ - name: Install jenkins
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+    - jenkins
+    - git
+
+ - name: Start and Enable Jenkins
+   service:
+     name=jenkins
+     state=started
+     enabled=yes
+
+ - name: Upload jenkins Apache conf
+   template:
+     src=jenkins.conf.j2
+     dest=/etc/httpd/conf.d/jenkins.conf
+   notify:
+    - Restart httpd

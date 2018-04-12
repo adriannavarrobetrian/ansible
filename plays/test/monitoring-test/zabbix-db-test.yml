@@ -1,0 +1,7 @@
+# Playbook to launch prod Zabbix server and associated database
+---
+ - name: Launch Instance
+   hosts: monitoring-test
+   connection: local
+   roles:
+     - rds-mysql

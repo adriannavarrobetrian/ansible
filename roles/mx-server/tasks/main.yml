@@ -1,0 +1,106 @@
+# Role to create and set up MX Servers for Powa Web
+#
+#
+---
+ - name: Install required packages
+   yum: 
+     name={{ item }}
+     state=present
+   with_items:
+    - exim-doc
+    - exim
+    - exim-mysql
+    - man
+    - nfs-utils
+    - openssl-devel
+    - mysql-devel
+    - libtool-ltdl-devel
+    - gdbm-devel
+
+ - name: Install Development Tools group
+   yum:
+     name="@Development tools"
+     state=present
+
+ - name: Upload courier-authlib 0.66.1 source
+   unarchive:
+     src=courier-authlib-0.66.1.tar.bz2
+     dest=/usr/local/src/
+
+ - name: Create courier-authlib dir
+   file:
+     path=/usr/local/courier-authlib/0.66.1/
+     state=directory
+     recurse=yes
+   register: courier_authlib
+
+ - name: Compile courier-authlib 0.66.1
+   shell: cd /usr/local/src/courier-authlib-0.66.1/ && ./configure --prefix=/usr/local/courier-authlib/0.66.1/ --without-authvchkpw --without-authdaemon --without-authpam --without-authldap --without-authpwd --without-authshadow --without-authcustom --without-authpipe --without-authpgsql && make && make install
+
+ - name: Run make install-configure for courier-authlib 0.66.1
+   shell: cd /usr/local/src/courier-authlib-0.66.1 && make install-configure
+
+ - name: Make 'actual' symlink
+   file:
+     dest=/usr/local/courier-authlib/actual
+     src={{ courier_authlib.path }}
+     state=link
+
+ - name: Move init script to init.d
+   copy:
+     src=courier-authlib.sysvinit
+     dest=/etc/init.d/courier-authlib
+     mode=755
+
+ - name: Add service
+   command: /sbin/chkconfig --add courier-authlib
+
+ - name: Start and enable service 
+   service:
+     name={{ item}}
+     enabled=yes
+     state=started
+   with_items:
+    - exim 
+    - courier-authlib
+
+ - name: Upload settings authdaemonrc file
+   copy:
+     src=authdaemonrc
+     dest=/usr/local/courier-authlib/actual/etc/authlib/authdaemonrc
+
+ - name: Upload mysql auth config file
+   template:
+     src=authmysqlrc.j2
+     dest=/usr/local/courier-authlib/actual/etc/authlib/authmysqlrc
+
+ - name: Upload courier-unicode-1.1
+   unarchive:
+     src=courier-unicode-1.1.tar.bz2
+     dest=/usr/local/src
+
+ - name: Create unicode dir
+   file:
+     path=/usr/local/courier-unicode/1.1
+     state=directory
+     recurse=yes
+   register: unicode
+
+ - name: Creat symlink to unicode version dir
+   file:
+     dest=/usr/local/courier-unicode/actual
+     src={{ unicode.path }}
+     state=link
+
+ - name: Compile courier-unicode-1.1
+   shell: cd /usr/local/src/courier-unicode-1.1 && ./configure && make && make install
+   notify:
+    - Restart courier-authlib
+
+# - name: Copy exim config
+#   copy:
+#     src=exim.conf.j2
+#     dest=/etc/exim/exim.conf
+#   notify:
+#    - Restart exim
+   

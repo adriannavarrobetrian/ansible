@@ -1,0 +1,132 @@
+---
+ - name: Start NFS Servers
+   connection: local
+   gather_facts: false
+   hosts: nfs-test
+   vars:
+     ports:
+      - 22
+      - 2049
+     group: test-servers
+   roles:
+    - server-start
+
+ - name: Start DB Servers
+   connection: local
+   gather_facts: false
+   hosts: mysql-test
+   vars:
+     ports:
+      - 22
+      - 3306
+     group: test-servers
+   roles:
+    - server-start
+
+ - name: Start Promo DB Servers
+   connection: local
+   gather_facts: false
+   hosts: promo-db-test
+   vars:
+     ports:
+      - 22
+      - 8092
+     group: test-servers
+   roles:
+    - server-start
+
+ - name: Start MQ Servers
+   connection: local
+   gather_facts: false
+   hosts: mq-test
+   vars:
+     ports:
+      - 22
+      - 61616
+     group: test-servers
+   roles:
+    - server-start
+
+ - name: Start MX Servers
+   connection: local
+   gather_facts: false
+   hosts: mx-test
+   vars:
+     ports:
+      - 22
+      - 587
+      - 465
+      - 25
+     group: test-servers
+   roles:
+    - server-start
+
+ - name: Start App Servers
+   connection: local
+   gather_facts: false
+   hosts: app-test
+   vars:
+     ports:
+      - 22
+     group: test-servers
+   roles:
+    - server-start
+
+ - name: Start Web Servers
+   connection: local
+   gather_facts: false
+   hosts: web-test
+   vars:
+     ports:
+      - 22
+      - 80
+      - 443
+     group: test-servers
+   roles:
+    - server-start
+
+ - name: Start Promo App Servers
+   connection: local
+   gather_facts: false
+   hosts: promo-app-test
+   vars:
+     ports:
+      - 22
+      - 21701
+      - 21700
+     group: test-servers
+   roles:
+    - server-start
+
+ - name: Start Load Balancers
+   connection: local
+   gather_facts: false
+   hosts: lb-test
+   vars:
+     ports:
+      - 22
+     group: test-servers
+   roles:
+    - server-start
+
+## Post Task to Start Tomcat
+
+ - name: Start Tomcat
+   gather_facts: false
+   become: yes
+   hosts: app-test
+   roles:
+    - tomcat-start
+
+## Post Task to Ensure Env is Responding
+
+ - name: Call Test Env URLs
+   hosts: localhost
+   connection: local
+   tasks:
+     - name: Test URL
+       uri:
+         url={{ item }}
+         status_code=200
+       with_items:
+        - "http://electrolux.test.gplshops.com/index.html"

@@ -1,0 +1,33 @@
+# Role to start EC2 servers. 
+#
+# Instance ID is pulled from variable held in /tmp/.{{ group }}/{{ inventory_hostname }}.server and removed on successful start
+#
+# Designed to be used for an overnight/weekend shutdown of instances
+---
+ - name: Retrieve server_id from tmp file
+   set_fact:
+     server_id="{{ lookup('file', '/tmp/.{{ group }}/{{ inventory_hostname }}.server') }}"
+
+ - name: Start Servers
+   ec2:
+     instance_ids={{ server_id }}
+     state=running
+     region="eu-west-1"
+     aws_access_key="{{ AWS_KEY }}"
+     aws_secret_key="{{ AWS_SECRET }}"
+
+ - name: Wait for Servers to start
+   wait_for:
+     port={{ item }}
+     host={{ inventory_hostname }}
+     delay=5
+     state=started
+     timeout=600
+   with_items:
+    - "{{ ports }}"
+
+ - name: Remove tmp files
+   file:
+     path=/tmp/{{ group }}/.{{ inventory_hostname }}.server
+     state=absent
+   delegate_to: localhost 

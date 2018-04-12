@@ -1,0 +1,67 @@
+# Role to create bind name server
+---
+ - set_fact:
+     master=ns-aux-01.{{ ENV }}.{{ ZONE }}
+     slave=ns-aux-02.{{ ENV }}.{{ ZONE }}
+
+ - name: Install bind
+   yum: 
+     name={{ item }}
+     state=present
+   with_items:
+     - bind
+     - bind-utils
+
+ - name: Fetch named.ca
+   get_url:
+     url=FTP.INTERNIC.NET/domain/named.cache
+     dest=/var/named/named.ca
+  
+ - name: Create zone dir
+   file:
+     path=/var/named/zone
+     state=directory
+     mode=775
+
+ - name: Create static dir
+   file:
+     path=/var/named/static
+     state=directory
+     owner=named
+     group=named
+     mode=775
+
+ - name: Create blank config files
+   file:
+     path=/etc/named/{{ item }}
+     state=touch
+   with_items:
+     - zones_static.conf
+     - zones_dynamic.conf
+
+ - name: Upload keys file
+   template:
+     src=named.ns1-ns2.key.j2
+     dest=/etc/named.ns1-ns2.key
+      
+ - name: Upload master config file
+   template:
+     src=named.master.conf.j2
+     dest=/etc/named.conf
+   when: ROLE == "master"
+   notify:
+    - Restart named 
+
+ - name: Upload slave config file
+   template:
+     src=named.slave.conf.j2
+     dest=/etc/named.conf
+   when: ROLE == "slave"
+   notify:
+    - Restart named
+
+ - name: Start and enable named
+   service: 
+     name=named
+     state=started
+     enabled=yes

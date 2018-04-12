@@ -1,0 +1,10 @@
+# Role to set dev server hosts entries
+# Anton Pritchard-Meaker
+---
+ - name: Insert hosts entries
+   lineinfile:
+     dest=/etc/hosts
+     line={{ item }} 
+   with_items:
+     - "127.0.0.1 jmshost smtphost dbhost" 
+     - "10.0.34.11 artifactory bamboo fisheye"

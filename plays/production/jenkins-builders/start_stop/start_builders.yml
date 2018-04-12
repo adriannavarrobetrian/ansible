@@ -1,0 +1,24 @@
+---
+ - name: Start Jenkins Builders
+   connection: local
+   gather_facts: false
+   hosts: jenkins-builders, openvas
+   vars:
+     ports:
+      - 22
+     group: jenkins-complete
+   roles:
+    - server-start
+
+ - name: Start Main Jenkins Server and Sonar/Nexus and Yum Repo
+   connection: local
+   gather_facts: false
+   hosts: jenkins, dev-tools-prod, yum-prod
+   vars:
+     ports:
+      - 22
+      - 80
+     group: jenkins-complete
+   roles:
+    - server-start
+

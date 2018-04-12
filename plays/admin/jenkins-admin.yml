@@ -1,0 +1,18 @@
+# Playbook to create a Jenkins server to be used for various admin tasks
+- name: Create Jenkins servers
+  hosts: jenkins-admin
+  connection: local
+  roles:
+   - ec2-instance
+
+- name: Configure Jenkins 
+  hosts: jenkins-admin
+  become: yes
+  roles:
+   - apache
+   - jenkins
+   - {role: jenkins-user, tags: jenkins-user}
+   - {role: backups-script, tags: backups-script}
+   - ansible-prep
+   - aws-cli
+   - zabbix-agent-start

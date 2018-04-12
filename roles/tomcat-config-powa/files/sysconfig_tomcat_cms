@@ -1,0 +1,62 @@
+# Apache tomcat WBEL configuration parameters
+# by Karl-Koenig Koenigsson
+#
+# $Id: tomcat.sysconfig,v 1.1 2004/05/17 06:59:22 koenig Exp $
+#
+
+# This is where the JDK is installed. This value is the default
+# from the Sun JDK installation
+#
+JAVA_HOME=/usr/java/latest
+
+# This is the directory where tomcat is installed. Since tomcat
+# comes in a tar file, it is just a matter of taste where to
+# put it
+#
+CATALINA_BASE=/usr/local/tomcat/actual/instances/cms
+CATALINA_HOME=/usr/local/tomcat/actual
+CATALINA_PID=$CATALINA_BASE/logs/catalina.pid
+
+# It is always a good thing to have a specific user associated with
+# an application of this type. Make sure that
+#
+# 1) the user exists, and
+# 2) all files under $CATALINA_HOME are owned by this user
+#
+CATALINA_USER=tomcat
+
+# These are the start and stop commands to the init script for
+# tomcat. I don't know why I put them here, to be honest, or if they
+# are really necessary. I modelled this script on others from WBEL and
+# thought it was a good idea at the time...
+#
+TOMCAT_START="start"
+TOMCAT_STOP="stop"
+
+# JMX and SSL properties
+CATALINA_OPTS="-Dcom.sun.management.config.file=$CATALINA_BASE/jmx/jmx.properties $CATALINA_OPTS"
+
+# SSL config
+# CATALINA_OPTS="-Djavax.net.ssl.keyStore=$CATALINA_BASE/jmx/.jmx_keystore -Djavax.net.ssl.keyStorePassword=sun3-as-20080723 $CATALINA_OPTS"
+
+# GC stats
+CATALINA_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintTenuringDistribution -XX:-TraceClassUnloading -Xloggc:$CATALINA_BASE/logs/gc-%t.log $CATALINA_OPTS"
+
+# GC Config
+CATALINA_OPTS="-XX:+DisableExplicitGC -XX:+UseConcMarkSweepGC -XX:+UseCMSInitiatingOccupancyOnly -XX:PermSize=256M -XX:MaxPermSize=512M -XX:NewSize=256M -XX:MaxNewSize=256M -XX:CMSInitiatingOccupancyFraction=60 -XX:SurvivorRatio=6 -XX:-OmitStackTraceInFastThrow $CATALINA_OPTS"
+
+# JVM Memory Settings
+CATALINA_OPTS="-server -Xms2048M -Xmx4096M $CATALINA_OPTS"
+
+# Allow encoded path delimiters and backslashes in URLs
+CATALINA_OPTS="-Dorg.apache.tomcat.util.buf.UDecoder.ALLOW_ENCODED_SLASH=true $CATALINA_OPTS"
+CATALINA_OPTS="-Dorg.apache.catalina.connector.CoyoteAdapter.ALLOW_BACKSLASH=true $CATALINA_OPTS"
+
+# Attach debugger
+#CATALINA_OPTS="$CATALINA_OPTS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8085"
+
+export JAVA_HOME CATALINA_BASE CATALINA_HOME CATALINA_PID CATALINA_USER TOMCAT_START TOMCAT_STOP CATALINA_OPTS
+
+ulimit -n 16384
+#export powa_crypt_password_file="/usr/local/tomcat/actual/conf/.secret"
+export powa_crypt_password_file="/tomcat/secret"

@@ -1,0 +1,18 @@
+# Playbook to launch Front-end Atlassian http proxy server
+
+ - name: Launch Instance
+   hosts: corp-web-prod
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Configure Server
+   hosts: corp-web-prod
+   become: yes
+   roles:
+    - {role: postfix-ses, tags: postfix-ses}
+    - apache
+    - apache-mod_sec
+    - mysql5.5
+    - corp-web
+    - zabbix-agent-start

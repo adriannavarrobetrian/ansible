@@ -1,0 +1,109 @@
+---
+ - hosts: mysql-test 
+   remote_user: smuhammad
+   vars:
+     tomcat_node: app-1.test.glp 
+     apache_node: web-1.test.glp
+   tasks:
+   - name: start mysql server
+     service: name=mysqld enabled=yes state=started
+     become: true
+#   - name: download db backup
+#     s3: mode=get bucket=greenlightpower object="{{ glp_env }}/db/{{ item }}_2016042701.dmp.gz" dest="/tmp/{{ item }}.dmp.gz" 
+#     with_items:
+#       - admin
+#       - api
+#       - cms
+#       - engine
+#       - file
+#       - gbase
+#     become: true
+   - name: download safe db backup
+     s3: mode=get bucket=greenlightpower object="{{ ENV }}/db/{{ item }}.dmp.gz" dest="/tmp/{{ item }}.dmp.gz" 
+     with_items:
+       - admin_safe
+       - api_safe
+       - cms_safe
+       - engine_safe
+       - file_safe
+       - gbase_safe
+       - mysql
+     become: true
+
+ - hosts: web-test 
+   remote_user: smuhammad
+   vars:
+     glp_env: test 
+     nfs_node: 172.16.30.10 
+   tasks:
+   - name: configure NFS mount (web)
+     mount: name={{ item.name }} src={{ nfs_node }}:/store/nfs/{{ item.src }}  opts=_netdev,ro,noatime,rsize=65536,wsize=65536,timeo=14,intr state=mounted fstype=nfs4
+     with_items:
+     - { name: "/web",                 src: "web" }
+     - { name: "/web/cms_resource",    src: "tomcat/resources/cms" }
+     - { name: "/web/engine_resource", src: "tomcat/resources/engine" }
+     - { name: "/web/template",        src: "tomcat/template/WEB-INF/template" }
+     - { name: "/web/file",            src: "tomcat/resources/file" }
+     become: True
+     ignore_errors: yes
+   - name: download apache config from S3
+     s3: mode=get bucket=greenlightpower object="{{ glp_env }}/conf/httpd_etc.tgz" dest="/tmp/httpd_etc.tgz"
+   - name: untar apache config
+     command: sudo /bin/tar zxf /tmp/httpd_etc.tgz -C /
+     become: True
+   - name: set ownership of apache config
+     file: path=/etc/httpd owner=root group=root recurse=yes
+     become: True
+   - name: set ownership of domains
+     file: path=/etc/httpd/conf.d/domains owner=rmiuser group=apache recurse=yes
+     become: True
+   - name: check machine role 
+     debug: msg="{{ ansible_hostname.split('-')[0] }}"
+     when: ansible_hostname | match ("^web*") 
+
+#
+# Install worker.properties & mod_jk.conf
+#
+ - hosts: web-test
+   remote_user: smuhammad
+   vars:
+     tomcat_1_host: 172.16.30.35 
+   roles:
+   - apache-config 
+
+ - hosts: app-test 
+   remote_user: smuhammad
+   vars:
+     nfs_node: 172.16.30.10 
+   tasks:
+   - name: configure NFS mount (tomcat)
+     mount: name=/tomcat src={{ nfs_node }}:/store/nfs/tomcat  opts=_netdev,rw,noatime,rsize=65536,wsize=65536,timeo=14,intr state=mounted fstype=nfs4
+     become: True
+   - name: create webapp symlinks
+     file: src=/tomcat/{{ item.app }} dest=/opt/tomcat/actual/instances/{{ item.instance }}/webapps/{{ item.link }} state=link
+     become: True
+     with_items:
+     - { instance: "cms",    link: "admin",    app: "admin"    }
+     - { instance: "cms",    link: "ws",       app: "api"      }
+     - { instance: "cms",    link: "cms",      app: "cms"      }
+     - { instance: "cms",    link: "file",     app: "file"     }
+     - { instance: "cms",    link: "gbase",    app: "gbase"    }
+     - { instance: "cms",    link: "rest",     app: "rest"     }
+     - { instance: "cms",    link: "template", app: "template" }
+     - { instance: "engine", link: "ROOT",     app: "engine"   }
+
+ - hosts: mysql-test
+   remote_user: smuhammad
+   tasks:
+   - name: create database users
+     mysql_user: name={{ item.user }} password={{ item.password }} priv=*.*:ALL state=present
+     with_items:
+     - { user: "admin",  password: "#admindbpass"  }
+     - { user: "api",    password: "#apidbpass"    }
+     - { user: "cms",    password: "#cmsdbpass"    }
+     - { user: "engine", password: "#enginedbpass" }
+     - { user: "file",   password: "#filedbpass"   }
+     - { user: "gbase",  password: "#gbasedbpass"  }
+     become: True
+
+

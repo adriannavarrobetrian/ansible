@@ -1,0 +1,21 @@
+# Playbook to spawn the Sandbox app
+
+ - name: Create Tomcat server
+   hosts: app-sb
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Install Tomcat 
+   hosts: app-sb
+   become: yes
+   vars:
+     ssh_users:
+      - "neastes"
+      - "rlukosevicius"
+      - "fmoraru"
+   roles:
+     - { role: ssh-users, tags: ssh-users }
+     - tomcat
+     - tomcat-config-powa
+     - zabbix-agent-start

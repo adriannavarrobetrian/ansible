@@ -1,0 +1,14 @@
+---
+ - name: copy mod_jk config
+   template: 
+     src=mod_jk.conf.j2 
+     dest=/etc/httpd/conf.d/mod_jk.conf 
+     owner=root 
+     group=root
+
+ - name: copy workers.properties
+   template: 
+     src=workers.properties.j2 
+     dest=/etc/httpd/conf.d/workers.properties 
+     owner=root 
+     group=root

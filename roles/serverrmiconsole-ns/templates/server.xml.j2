@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+
+<Hermes config-handler="uk.co.unitechnology.server.rmi.RMIConfigFile">
+
+	<Properties>
+                <Property name="Install.Directory"
+                                value="/usr/local/serverrmiconsole" />
+
+                <Property name="Cache.FactoryClassName"
+                                value="uk.co.premierhost.core.cache.EHCacheFactory" />
+
+		<Property name="Resource.Errors" 
+				value="/resources/errors.properties" />
+		<Property name="Resource.Messages" 
+				value="/resources/messages.properties" />
+
+		<Property name="log4j.config"
+				value="/conf/log4j.properties" />
+
+		<!-- Thread Pool settings -->
+
+		<Property name="ThreadPool.CPUAware" value="false" />	
+		<Property name="ThreadPool.LoadFactor" value="5" />	
+		<Property name="ThreadPool.LoadConstant" value="10" />	
+		<Property name="ThreadPool.NumberOfThreads" value="35" />	
+
+
+
+		<Property name="KeyStore.File" value="/usr/local/serverrmiconsole/conf/BindNameServerStore" />
+                <Property name="KeyStore.Password" value="sToreBnd62" />
+
+                <Property name="RMI.HostName" value="{{ inventory_hostname }}" />              
+                <Property name="RMI.Port" value="2007" />
+		<Property name="RMI.SecureConnection" value="false" />
+
+                <Property name="CommandLine.ClassName" value="uk.co.unitechnology.server.impl.LinuxCommandLine" />
+                <Property name="CommandLine.EnableCommands" value="true" />
+
+                <Property name="Backup.ClassName" value="uk.co.unitechnology.server.impl.ConfigFileBackup" />
+                <Property name="Backup.InitialDirectory" value="/backup/config{0}" />
+                <Property name="Backup.FileCommand" value="cp {0} {1}" />
+                <Property name="Backup.DirectoryCommand" value="cp -R {0} {1}" />
+
+                <Property name="Backup.DateFormat" value="yyyy.MM.dd-HH:mm:ss" />
+
+                <Property name="Backup.Enabled" value="true" />
+                <Property name="Backup.File.Format" value="{0}-{1}" />
+
+                <Property name="Bind.ControlCommand" value="/usr/bin/sudo /etc/init.d/named {0}" />
+                <Property name="Bind.ZoneFileName" value="/etc/named/zones_dynamic.conf" />
+                <Property name="Bind.DomainZoneDirectory" value="/var/named/zone" />
+
+	</Properties>
+
+
+	<RemoteObjects>
+
+                  <RemoteObject name="BindNameServerFacade" class="uk.co.unitechnology.server.impl.BindNameServerFacade" config-class="uk.co.unitechnology.server.impl.XMLServerConfiguration" />
+
+	</RemoteObjects>
+</Hermes>

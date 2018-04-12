@@ -1,0 +1,19 @@
+# Role to install Nginx latest
+# Anton Pritchard-Meaker
+# Needs to use yum_repository module when Ansible 2.1 is available
+---
+ - name: Enable Nginx yum repo
+   copy:
+     src=nginx.repo
+     dest=/etc/yum.repos.d/
+
+ - name: Install Nginx
+   yum:
+     name=nginx
+     state=present
+
+ - name: Start and enable nginx
+   service:
+     name=nginx
+     enabled=yes
+     state=started

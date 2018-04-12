@@ -1,0 +1,15 @@
+ - name: Install Apache
+   yum:
+     name={{ item }}
+     state=present
+   with_items:
+    - httpd
+    - mod_ssl
+    - mod_security
+   register: apache
+
+ - name: Start and Enable httpd
+   service:
+     name=httpd
+     state=started
+     enabled=yes

@@ -1,0 +1,35 @@
+# Role to create MySQL RDS instance 
+#
+#
+ - name: Launch RDS instance
+   rds:
+     command: create
+     db_engine: MySQL
+     engine_version: "{{ DB_ENGINE_VERSION }}"
+     db_name: "{{ DB_NAME }}"
+     instance_name: "{{ DB_INSTANCE_NAME }}-{{ ENV }}"
+     instance_type: "{{ DB_INSTANCE_TYPE }}"
+     username: "{{ MYSQL_USER_NAME }}"
+     password: "{{ MYSQL_USER_PASS }}"
+     region: eu-west-1
+     size: "{{ DB_SIZE }}"
+     subnet: "{{ DB_SUBNET }}"
+     wait: yes
+     tags: "{{ DB_TAGS }}"
+     wait_timeout: 1200
+     character_set_name: "{{ DB_CHAR_SET }}"
+   register: rds
+
+ - name: Create DNS record
+   route53:
+     command: create
+     zone: "{{ ENV }}.{{ ZONE }}"
+     record: "{{ item.id }}.{{ ENV }}.{{ ZONE }}"
+     type: CNAME
+     ttl: 60
+     value: "{{ item.endpoint }}"
+     overwrite: yes
+     private_zone: yes
+     retry_interval: 10
+   with_items: 
+    - "{{ rds.instance }}"

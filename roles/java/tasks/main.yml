@@ -1,0 +1,45 @@
+# Role to install Java 7 JDK via RPM
+# Anton Pritchard-Meaker
+---
+
+ - name: Stat existence of Java
+   stat: 
+     path=/usr/java/
+   register: java_loc
+
+ - name: Download Java from Oracle
+   s3:
+     mode=get
+     bucket=greenlightpower
+     object=installers/jdk-7u79-linux-x64.rpm
+     dest=/tmp/jdk-7u79-linux-x64.rpm
+   when: not java_loc.stat.exists
+   register: java_dl
+
+ - name: Install Java RPM
+   yum:
+     name=/tmp/jdk-7u79-linux-x64.rpm
+     state=present
+   register: java_install
+   when: java_dl.changed
+
+ - name: Clean up Java RPM
+   file:
+     path=jdk-7u79-linux-x64.rpm
+     state=absent
+   when: java_install.changed
+
+ - name: Set JAVA_HOME in .bashrc
+   lineinfile:
+     line={{ item }}
+     dest=/root/.bashrc
+   with_items:
+     - "export JAVA_HOME=/usr/java/latest"
+     - "export PATH=$JAVA_HOME/bin:$PATH"
+   when: java_install.changed
+
+ - name: Extract Unlimited JCE Policy for JDK7
+   unarchive:
+     src=UnlimitedJCEPolicyJDK7.zip
+     dest=/usr/java/latest/jre/lib/security
+   when: java_install.changed

@@ -1,0 +1,17 @@
+# Playbook to launch Name Servers for test environment
+#
+---
+ - name: Launch instance
+   hosts: ns-test 
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Install bind
+   hosts: ns-test
+   become: yes
+   roles:
+     - named-auth-server
+     - named-auth-server-static-zones
+     - serverrmiconsole-ns
+     - zabbix-agent-start

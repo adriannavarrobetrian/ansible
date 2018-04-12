@@ -1,0 +1,7 @@
+# Play to get zabbix-agent installed
+
+ - name: Install and configure zabbix-agent
+   hosts: stash-prod
+   become: yes
+   roles:
+    - postfix-ses

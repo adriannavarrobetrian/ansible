@@ -1,0 +1,11 @@
+# Role to put Host Groups into Maintenance Mode in Zabbix
+---
+ - name: Put Servers Into Maintenance Mode
+   zabbix_maintenance:
+     name={{ MAINT_NAME }}
+     host_groups={{ MAINT_GROUPS }}
+     login_password={{ MAINT_PASS }}
+     login_user={{ MAINT_USER }}
+     minutes={{ MAINT_MINS }}
+     server_url=http://monitor.glp.com/zabbix/
+     desc="This server is down for Maintenace or deliberately stopped"

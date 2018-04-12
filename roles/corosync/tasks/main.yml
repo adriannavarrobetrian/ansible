@@ -1,0 +1,38 @@
+# Role to install corrosync
+# This role will install corosync, but not write a config file
+# Config files to be written per stack layer using corosync-lb/nfs/mysql/mq roles
+---
+ - name: Install corrosync
+   yum: 
+     name={{ item }} 
+     state=present
+   with_items:
+    - corosync
+    - pacemaker
+
+ - name: Upload corosync config
+   template:
+     src=corosync.conf.j2
+     dest=/etc/corosync/corosync.conf
+
+ - name: Upload pacemaker config
+   copy:
+     src=pacemaker
+     dest=/etc/corosync/service.d
+
+ - name: Upload common authkey
+   copy:
+     src=authkey
+     dest=/etc/corosync/authkey
+     mode=400
+
+ - name: Upload ha yum config
+   copy:
+     src=ha-clustering.repo
+     dest=/etc/yum.repos.d/
+   register: ha_yum
+
+ - name: Install crmsh
+   yum:
+     name=crmsh
+     state=latest

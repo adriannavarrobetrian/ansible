@@ -1,0 +1,26 @@
+# Playbook to launch test Load Balancers
+#
+ - name: Create instance
+   hosts: lb-sb
+   connection: local
+   roles:
+     - ec2-instance
+
+ - name: Get EC2 Facts
+   hosts: lb-sb
+   gather_facts: false
+   tasks:
+    - name: Get EC2 Facts for hosts
+      action: ec2_facts
+
+ - name: Set up haproxy
+   hosts: lb-sb
+   become: yes
+   roles:
+     - ec2-api-tools
+     - { role: stunnel, tags: stunnel }
+     - haproxy
+     - serverrmiconsole-lb
+     - corosync
+     - corosync-lb
+     - zabbix-agent-start

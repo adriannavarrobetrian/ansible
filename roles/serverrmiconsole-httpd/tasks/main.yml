@@ -1,0 +1,66 @@
+# Role to install serverrmiconsole for Apache web servers
+# Relies on having Apache installed
+# Dependencies
+#  - apache
+#  - apache-config-powa
+#  - glp-repo
+---
+ - name: install Server RMI Console (DNS / HAProxy)
+   yum: 
+     name=httpd-serverrmiconsole 
+     state=latest
+
+ - name: Set ownership of dirs to rmiuser
+   file:
+     path=/usr/local/serverrmiconsole
+     owner=rmiuser
+     group=apache
+     recurse=yes
+
+ - name: Adjust startconsole.sh
+   template:
+     src=startconsole.sh.j2
+     dest=/usr/local/serverrmiconsole/bin/startconsole.sh
+     owner=rmiuser
+     group=apache
+
+ - name: Upload custom server.xml
+   template:
+     src=server.xml.j2
+     dest=/usr/local/serverrmiconsole/conf/server.xml
+     owner=rmiuser
+     group=apache
+
+ - name: Chown vhost.conf to rmiuser.apache
+   file:
+     path=/etc/httpd/conf.d/vhost.conf
+     owner=rmiuser
+     group=apache
+
+ - name: Create directories
+   file:
+     path={{ item }}
+     owner=rmiuser
+     group=apache
+     recurse=yes
+     state=directory
+   with_items:
+    - "/backup/config/etc/httpd/conf.d"
+    - "/etc/httpd/conf.d/domains"
+
+# This should really be changed in the rpm
+ - name: Change rmiuser shell to bash
+   user:
+     name=rmiuser
+     shell=/bin/bash
+
+ - name: Allow rmiuser to reload httpd
+   lineinfile:
+     dest=/etc/sudoers
+     line="rmiuser ALL=NOPASSWD{{ ":" }}	 /usr/sbin/apachectl configtest,/usr/sbin/apachectl graceful"
+
+ - name: Start and enable serverrmiconsole
+   service:
+     name=serverrmiconsole
+     state=started
+     enabled=yes
